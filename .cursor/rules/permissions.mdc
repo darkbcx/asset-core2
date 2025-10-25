@@ -1,0 +1,560 @@
+---
+title: User Permissions & Role-Based Access Control
+description: Comprehensive permissions system for AssetCore multi-tenant asset management platform
+alwaysApply: true
+---
+
+# User Permissions & Role-Based Access Control
+
+## Overview
+
+AssetCore implements a granular permission system that supports both tenant-specific users and platform-wide system administrators. The permission system ensures proper data isolation, security, and operational efficiency across all user roles.
+
+### Permission Categories
+
+- **Assets**: Asset management and tracking permissions
+- **Components**: Component-level operations and maintenance
+- **Maintenance**: Maintenance workflow and work order management
+- **Users**: User management and role configuration
+- **Companies**: Company configuration and settings
+- **Files**: File upload, download, and management
+- **Reports**: Report generation and analytics access
+- **System**: Platform-wide system administration
+
+## Tenant User Permissions
+
+### Company Administrator
+
+**Scope:** Full administrative access within company scope
+
+| Permission Category | Create | Read | Update | Delete | Special Actions                              |
+| ------------------- | ------ | ---- | ------ | ------ | -------------------------------------------- |
+| **Assets**          | ✅     | ✅   | ✅     | ✅     | Bulk import/export, Asset type configuration |
+| **Components**      | ✅     | ✅   | ✅     | ✅     | Component transfer management                |
+| **Maintenance**     | ✅     | ✅   | ✅     | ✅     | Schedule management, Technician assignment   |
+| **Users**           | ✅     | ✅   | ✅     | ✅     | Role assignment, Permission configuration    |
+| **Companies**       | ✅     | ✅   | ✅     | ❌     | Company settings, Subscription management    |
+| **Files**           | ✅     | ✅   | ✅     | ✅     | File management, Storage configuration       |
+| **Reports**         | ✅     | ✅   | ✅     | ✅     | Custom reports, Data export                  |
+| **System**          | ❌     | ❌   | ❌     | ❌     | No system-level access                       |
+
+**Additional Permissions:**
+
+- Configure company-specific asset types and maintenance procedures
+- Manage company subscription and billing settings
+- Access to all company data and analytics
+- User onboarding and training management
+- Integration with external company systems
+
+### Asset Manager
+
+**Scope:** Asset portfolio oversight and maintenance planning
+
+| Permission Category | Create | Read | Update | Delete | Special Actions                               |
+| ------------------- | ------ | ---- | ------ | ------ | --------------------------------------------- |
+| **Assets**          | ✅     | ✅   | ✅     | ❌     | Asset health monitoring, Performance analysis |
+| **Components**      | ✅     | ✅   | ✅     | ❌     | Component lifecycle management                |
+| **Maintenance**     | ✅     | ✅   | ✅     | ❌     | Schedule creation, Priority management        |
+| **Users**           | ❌     | ✅   | ❌     | ❌     | View technician assignments                   |
+| **Companies**       | ❌     | ✅   | ❌     | ❌     | View company settings                         |
+| **Files**           | ✅     | ✅   | ✅     | ❌     | Maintenance documentation                     |
+| **Reports**         | ✅     | ✅   | ✅     | ❌     | Asset performance reports                     |
+| **System**          | ❌     | ❌   | ❌     | ❌     | No system-level access                        |
+
+**Additional Permissions:**
+
+- Create and manage maintenance schedules
+- Assign maintenance tasks to technicians
+- Configure maintenance standards and procedures
+- Generate asset performance and cost analysis reports
+- Monitor asset utilization and efficiency metrics
+- Access to predictive maintenance insights
+
+### Operations Supervisor
+
+**Scope:** Operational continuity and performance monitoring
+
+| Permission Category | Create | Read | Update | Delete | Special Actions                |
+| ------------------- | ------ | ---- | ------ | ------ | ------------------------------ |
+| **Assets**          | ❌     | ✅   | ❌     | ❌     | Real-time status monitoring    |
+| **Components**      | ❌     | ✅   | ❌     | ❌     | Component health tracking      |
+| **Maintenance**     | ❌     | ✅   | ❌     | ❌     | Impact assessment              |
+| **Users**           | ❌     | ✅   | ❌     | ❌     | View user assignments          |
+| **Companies**       | ❌     | ✅   | ❌     | ❌     | View operational settings      |
+| **Files**           | ❌     | ✅   | ❌     | ❌     | View maintenance documentation |
+| **Reports**         | ✅     | ✅   | ❌     | ❌     | Operational reports only       |
+| **System**          | ❌     | ❌   | ❌     | ❌     | No system-level access         |
+
+**Additional Permissions:**
+
+- Generate operational reports and KPIs
+- View maintenance schedules and operational impact
+- Access to real-time asset status dashboards
+- Monitor downtime and performance metrics
+- Export operational data for executive reporting
+- View maintenance cost analysis and trends
+
+### Maintenance Technician
+
+**Scope:** Field maintenance execution and documentation
+
+| Permission Category | Create | Read | Update | Delete | Special Actions                |
+| ------------------- | ------ | ---- | ------ | ------ | ------------------------------ |
+| **Assets**          | ❌     | ✅   | ❌     | ❌     | View assigned assets only      |
+| **Components**      | ❌     | ✅   | ✅     | ❌     | Update component status        |
+| **Maintenance**     | ✅     | ✅   | ✅     | ❌     | Work order execution           |
+| **Users**           | ❌     | ❌   | ❌     | ❌     | No user management             |
+| **Companies**       | ❌     | ❌   | ❌     | ❌     | No company access              |
+| **Files**           | ✅     | ✅   | ❌     | ❌     | Upload maintenance photos/docs |
+| **Reports**         | ❌     | ✅   | ❌     | ❌     | View personal work reports     |
+| **System**          | ❌     | ❌   | ❌     | ❌     | No system-level access         |
+
+**Additional Permissions:**
+
+- View assigned maintenance work orders
+- Update maintenance record progress and completion
+- Upload photos and documentation for maintenance work
+- Update component status (installed, repairing, removed)
+- Access mobile-optimized interface for field work
+- View maintenance history for assigned components
+
+## System Administrator Permissions
+
+### Super Administrator
+
+**Scope:** Platform-wide management and configuration
+
+| Permission Category | Create | Read | Update | Delete | Special Actions                    |
+| ------------------- | ------ | ---- | ------ | ------ | ---------------------------------- |
+| **Assets**          | ✅     | ✅   | ✅     | ✅     | Cross-tenant asset management      |
+| **Components**      | ✅     | ✅   | ✅     | ✅     | Global component oversight         |
+| **Maintenance**     | ✅     | ✅   | ✅     | ✅     | Platform-wide maintenance          |
+| **Users**           | ✅     | ✅   | ✅     | ✅     | All tenant user management         |
+| **Companies**       | ✅     | ✅   | ✅     | ✅     | Tenant provisioning/deprovisioning |
+| **Files**           | ✅     | ✅   | ✅     | ✅     | Global file management             |
+| **Reports**         | ✅     | ✅   | ✅     | ✅     | Platform analytics                 |
+| **System**          | ✅     | ✅   | ✅     | ✅     | System configuration               |
+
+**Additional Permissions:**
+
+- Create and manage tenant organizations
+- Configure platform-wide settings and features
+- Monitor system performance and security
+- Manage system integrations and APIs
+- Access to all tenant data for support purposes
+- Platform maintenance and updates
+- Security and compliance management
+- Backup and disaster recovery operations
+
+### Support Administrator
+
+**Scope:** Technical support and user assistance
+
+| Permission Category | Create | Read | Update | Delete | Special Actions             |
+| ------------------- | ------ | ---- | ------ | ------ | --------------------------- |
+| **Assets**          | ❌     | ✅   | ❌     | ❌     | Troubleshooting access      |
+| **Components**      | ❌     | ✅   | ❌     | ❌     | Support diagnostics         |
+| **Maintenance**     | ❌     | ✅   | ❌     | ❌     | Issue investigation         |
+| **Users**           | ❌     | ✅   | ✅     | ❌     | User support and training   |
+| **Companies**       | ❌     | ✅   | ❌     | ❌     | Configuration assistance    |
+| **Files**           | ❌     | ✅   | ❌     | ❌     | File access troubleshooting |
+| **Reports**         | ❌     | ✅   | ❌     | ❌     | Support analytics           |
+| **System**          | ❌     | ✅   | ❌     | ❌     | System monitoring only      |
+
+**Additional Permissions:**
+
+- Read access to all tenant data for troubleshooting
+- User support and training capabilities
+- Data migration and import assistance
+- Issue tracking and resolution access
+- System monitoring and health checks
+- Documentation and knowledge base management
+- Customer onboarding support
+- Technical issue escalation to Super Administrators
+
+## Permission Implementation
+
+### Permission Format
+
+The AssetCore permission system uses a hierarchical `[entity]:[action]` format with wildcard support for flexible permission management.
+
+#### Permission Format
+
+**Basic Format:** `[entity]:[action]`
+
+**Examples:**
+- `assets:create` - Create assets
+- `assets:read` - Read assets
+- `assets:update` - Update assets
+- `assets:delete` - Delete assets
+- `maintenance:assign` - Assign maintenance tasks
+- `users:manage` - Manage users
+
+**Wildcard Support:**
+- `*:*` - All permissions (Super Administrator)
+- `assets:*` - All asset-related permissions
+- `*:read` - Read access to all entities
+- `maintenance:*` - All maintenance permissions
+
+#### Permission Categories
+
+| Entity | Actions | Description |
+|--------|---------|-------------|
+| **assets** | create, read, update, delete, import, export | Asset management operations |
+| **components** | create, read, update, delete, transfer | Component operations |
+| **maintenance** | create, read, update, delete, assign, schedule | Maintenance workflow |
+| **users** | create, read, update, delete, manage, invite | User management |
+| **companies** | read, update, configure, billing | Company settings |
+| **files** | upload, download, delete, manage | File operations |
+| **reports** | generate, export, schedule | Report generation |
+| **system** | configure, monitor, backup, logs | System administration |
+
+### Database Schema
+
+The permissions are stored in the `user_companies.permissions` JSONB field as an array of permission strings:
+
+```json
+{
+  "permissions": [
+    "assets:create",
+    "assets:read", 
+    "assets:update",
+    "assets:delete",
+    "components:create",
+    "components:read",
+    "components:update",
+    "maintenance:create",
+    "maintenance:read",
+    "maintenance:update",
+    "maintenance:assign",
+    "users:read",
+    "files:upload",
+    "files:download",
+    "reports:generate"
+  ]
+}
+```
+
+#### Permission Hierarchy Examples
+
+**System Administrators:**
+```json
+{
+  "permissions": ["*:*"]
+}
+```
+
+**Company Administrators:**
+```json
+{
+  "permissions": [
+    "assets:*",
+    "components:*", 
+    "maintenance:*",
+    "users:*",
+    "companies:read",
+    "companies:update",
+    "companies:configure",
+    "files:*",
+    "reports:*"
+  ]
+}
+```
+
+**Asset Managers:**
+```json
+{
+  "permissions": [
+    "assets:create",
+    "assets:read", 
+    "assets:update",
+    "components:create",
+    "components:read",
+    "components:update",
+    "maintenance:create",
+    "maintenance:read",
+    "maintenance:update",
+    "maintenance:assign",
+    "maintenance:schedule",
+    "users:read",
+    "files:upload",
+    "files:download",
+    "files:manage",
+    "reports:generate",
+    "reports:export"
+  ]
+}
+```
+
+**Operations Supervisors:**
+```json
+{
+  "permissions": [
+    "*:read",
+    "maintenance:read",
+    "reports:generate",
+    "reports:export"
+  ]
+}
+```
+
+**Maintenance Technicians:**
+```json
+{
+  "permissions": [
+    "assets:read",
+    "components:read",
+    "components:update", 
+    "maintenance:create",
+    "maintenance:read",
+    "maintenance:update",
+    "files:upload",
+    "files:download"
+  ]
+}
+```
+
+**Support Administrators:**
+```json
+{
+  "permissions": [
+    "*:read",
+    "users:update",
+    "system:monitor"
+  ]
+}
+```
+
+### Permission Validation
+
+#### Permission Checking Functions
+
+```typescript
+// Check if user has specific permission
+export function hasPermission(userPermissions: string[], requiredPermission: string): boolean {
+  // Direct match
+  if (userPermissions.includes(requiredPermission)) {
+    return true;
+  }
+  
+  // Wildcard checks
+  const [entity, action] = requiredPermission.split(':');
+  
+  // Check for entity wildcard (e.g., "assets:*")
+  if (userPermissions.includes(`${entity}:*`)) {
+    return true;
+  }
+  
+  // Check for action wildcard (e.g., "*:read")
+  if (userPermissions.includes(`*:${action}`)) {
+    return true;
+  }
+  
+  // Check for global wildcard (e.g., "*:*")
+  if (userPermissions.includes('*:*')) {
+    return true;
+  }
+  
+  return false;
+}
+
+// Check multiple permissions (all must be satisfied)
+export function hasAllPermissions(userPermissions: string[], requiredPermissions: string[]): boolean {
+  return requiredPermissions.every(permission => hasPermission(userPermissions, permission));
+}
+
+// Check multiple permissions (any must be satisfied)
+export function hasAnyPermission(userPermissions: string[], requiredPermissions: string[]): boolean {
+  return requiredPermissions.some(permission => hasPermission(userPermissions, permission));
+}
+
+// Get user's permissions for a specific entity
+export function getEntityPermissions(userPermissions: string[], entity: string): string[] {
+  return userPermissions
+    .filter(permission => permission.startsWith(`${entity}:`) || permission === '*:*')
+    .map(permission => permission.split(':')[1])
+    .filter(action => action !== '*');
+}
+```
+
+#### API Endpoint Protection
+
+```typescript
+// Permission middleware for specific permission
+export function requirePermission(requiredPermission: string) {
+  return async (req: Request, res: Response, next: NextFunction) => {
+    const user = req.user;
+    const userPermissions = user.permissions || [];
+    
+    if (!hasPermission(userPermissions, requiredPermission)) {
+      return res.status(403).json({ 
+        error: 'Insufficient permissions',
+        required: requiredPermission,
+        user_permissions: userPermissions
+      });
+    }
+    
+    next();
+  };
+}
+
+// Permission middleware for multiple permissions (any)
+export function requireAnyPermission(requiredPermissions: string[]) {
+  return async (req: Request, res: Response, next: NextFunction) => {
+    const user = req.user;
+    const userPermissions = user.permissions || [];
+    
+    if (!hasAnyPermission(userPermissions, requiredPermissions)) {
+      return res.status(403).json({ 
+        error: 'Insufficient permissions',
+        required: requiredPermissions,
+        user_permissions: userPermissions
+      });
+    }
+    
+    next();
+  };
+}
+
+// Permission middleware for multiple permissions (all)
+export function requireAllPermissions(requiredPermissions: string[]) {
+  return async (req: Request, res: Response, next: NextFunction) => {
+    const user = req.user;
+    const userPermissions = user.permissions || [];
+    
+    if (!hasAllPermissions(userPermissions, requiredPermissions)) {
+      return res.status(403).json({ 
+        error: 'Insufficient permissions',
+        required: requiredPermissions,
+        user_permissions: userPermissions
+      });
+    }
+    
+    next();
+  };
+}
+```
+
+#### Usage Examples
+
+```typescript
+// API route protection examples
+app.get('/api/assets', requirePermission('assets:read'), getAssets);
+app.post('/api/assets', requirePermission('assets:create'), createAsset);
+app.put('/api/assets/:id', requirePermission('assets:update'), updateAsset);
+app.delete('/api/assets/:id', requirePermission('assets:delete'), deleteAsset);
+
+// Multiple permission requirements
+app.get('/api/reports', requireAnyPermission(['reports:generate', 'reports:export']), getReports);
+app.post('/api/maintenance', requireAllPermissions(['maintenance:create', 'maintenance:assign']), createMaintenance);
+
+// Dynamic permission checking
+export function checkAssetAccess(userId: string, assetId: string, action: string): boolean {
+  const user = getUserById(userId);
+  const requiredPermission = `assets:${action}`;
+  return hasPermission(user.permissions, requiredPermission);
+}
+```
+
+#### Multi-Company Access Control
+
+```typescript
+// Multi-company data access control
+export function enforceMultiCompanyAccess(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  const user = req.user;
+  const requestedCompanyId = req.params.companyId || req.body.companyId;
+
+  // System administrators can access all tenant data
+  if (user.user_type === "system_admin") {
+    return next();
+  }
+
+  // Tenant users must have access to the requested company
+  if (user.user_type === "tenant") {
+    const hasAccess = user.companies?.some(
+      (company) => company.company_id === requestedCompanyId && company.is_active
+    );
+    
+    if (hasAccess) {
+      req.companyId = requestedCompanyId;
+      req.userRole = user.companies.find(
+        (c) => c.company_id === requestedCompanyId
+      )?.role;
+      return next();
+    }
+  }
+
+  return res
+    .status(403)
+    .json({ error: "Insufficient company access permissions" });
+}
+
+// Get user's accessible companies
+export function getUserCompanies(userId: string): Promise<CompanyAccess[]> {
+  const query = `
+    SELECT uc.company_id, uc.role, uc.permissions, uc.is_primary, uc.is_active,
+           c.name as company_name, c.slug as company_slug
+    FROM user_companies uc
+    JOIN companies c ON uc.company_id = c.id
+    WHERE uc.user_id = ? AND uc.is_active = true AND c.is_active = true
+    ORDER BY uc.is_primary DESC, uc.joined_at ASC
+  `;
+  
+  return db.execute(query, [userId]);
+}
+```
+
+### Security Considerations
+
+#### Data Access Control
+
+- **Multi-Company Access**: Tenant users can access data from multiple companies they're associated with
+- **Company-Specific Permissions**: Users can have different roles and permissions in different companies
+- **Primary Company**: Users have a designated primary company for default operations
+- **System Admin Override**: System administrators can access all tenant data when needed
+- **Permission Inheritance**: Higher-level roles inherit permissions from lower-level roles
+- **Audit Trail**: All permission changes and access attempts are logged
+
+#### Session Management
+
+- JWT tokens include user type, accessible companies, and company-specific permissions
+- Token refresh includes permission updates and company access changes
+- Session timeout based on user role and security requirements
+- Company context switching requires re-authentication or token refresh
+
+#### API Security
+
+- All API endpoints validate user permissions and company access before execution
+- Database queries automatically filter by company_id based on user's accessible companies
+- File access is controlled by entity ownership and user permissions within company context
+- Audit logging captures all permission-related actions with company context
+- Company switching requires explicit permission validation
+
+## Permission Management
+
+### Role Assignment
+
+- **Company Administrators** can assign roles within their company
+- **Super Administrators** can assign roles across all tenants
+- Role changes require appropriate permissions and are logged
+- Permission inheritance is automatically applied
+
+### Permission Updates
+
+- Permissions can be updated by users with appropriate authority
+- Changes are immediately effective for new sessions
+- Existing sessions require token refresh to pick up permission changes
+- All permission modifications are audited
+
+### Emergency Access
+
+- Super Administrators can temporarily elevate permissions for emergency situations
+- Emergency access is time-limited and requires justification
+- All emergency access is logged and monitored
+- Post-emergency review and cleanup procedures
+
+This comprehensive permission system ensures that AssetCore maintains proper security, data isolation, and operational efficiency while providing the flexibility needed for different user roles and responsibilities.

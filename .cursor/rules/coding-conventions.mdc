@@ -1,0 +1,180 @@
+---
+title: Coding Conventions
+description: A comprehensive guide to coding standards, project structure, and development patterns for maintaining consistent, secure, and maintainable code across the project.
+alwaysApply: true
+---
+
+# Coding Conventions
+
+## Overview
+
+AssetCore follows comprehensive coding standards to ensure consistent, secure, and maintainable code across the entire project. These conventions cover function design, naming patterns, and backend development practices to maintain high code quality and developer productivity.
+
+### Key Principles
+
+- **Consistency**: Uniform coding patterns across all files and components
+- **Type Safety**: Full TypeScript integration with proper type definitions
+- **Security**: Secure coding practices and input validation
+- **Maintainability**: Clean, readable code with clear structure
+- **Performance**: Optimized patterns for backend and database operations
+
+## Core Development Patterns
+
+### Pure Functions
+
+AssetCore emphasizes the use of pure functions for business logic and data operations.
+
+```typescript
+// ✅ CORRECT: Pure functions
+export async function findAssetById(context: CompanyContext, id: string): Promise<Asset | null> {
+  return queryOne('SELECT * FROM assets WHERE id = ? AND company_id = ?', [id, context.companyId]);
+}
+
+// ❌ AVOID: Classes (unless needed for instanceof)
+export class AssetRepository { }
+```
+
+## Naming Conventions
+
+### Variables & Functions
+
+```typescript
+// ✅ CORRECT: Descriptive, camelCase
+
+// Boolean variables: use 'is', 'has', 'should', 'can'
+const isAuthenticated = true;
+const hasPermission = false;
+const shouldRefetch = true;
+const canEdit = user.role === 'admin';
+const isSysAdmin = user.systemRole === 'System Administrators';  // ⭐ System Administrators check
+
+// Arrays: plural nouns
+const assets = await getAssets();
+const tickets = await getTickets();
+const maintenanceRecords = await getMaintenanceRecords();
+const companies = await getAllCompanies();          // ⭐ System-wide data
+
+// Single objects: singular nouns
+const asset = await getAssetById(id);
+const ticket = await getTicketById(id);
+const user = await getUserById(id);
+
+// Functions: verb + noun
+async function getAssets() { }
+async function createAsset() { }
+async function updateAssetStatus() { }
+async function deleteAsset() { }
+async function getAllCompanies() { }                // ⭐ System Administrators function
+async function getUserSystemRole() { }              // ⭐ System Administrators function
+
+// Event handlers: 'handle' or 'on' prefix
+function handleSubmit() { }
+function handleAssetClick() { }
+function onTicketCreate() { }
+function onMaintenanceComplete() { }
+
+// ❌ WRONG: Unclear or inconsistent
+const a = await getAssets();              // Too short
+const AssetsList = [];                    // Should be camelCase
+const authenticated = true;               // Use isAuthenticated
+const asset = await getAssets();          // Singular/plural mismatch
+function getData() { }                    // Too generic
+function click() { }                      // No context
+```
+
+### Constants
+
+```typescript
+// ✅ CORRECT: UPPER_SNAKE_CASE for true constants
+
+// Configuration constants
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+const API_BASE_URL = '/api';
+const DEFAULT_PAGE_SIZE = 20;
+
+// Enum-like objects
+const ASSET_STATUS = {
+  OPERATIONAL: 'operational',
+  INACTIVE: 'inactive',
+  MAINTENANCE: 'maintenance',
+} as const;
+
+const USER_ROLES = {
+  System Administrators: 'System Administrators',         // ⭐ System-wide role
+  ADMIN: 'admin',
+  MANAGER: 'manager',
+  TECHNICIAN: 'technician',
+  FIELD_OPS: 'field_ops',
+} as const;
+
+// ❌ WRONG: Regular variables as constants
+const maxFileSize = 5242880;              // Should be UPPER_SNAKE_CASE
+const AssetStatus = { ... };              // Should be UPPER_SNAKE_CASE
+```
+
+### Types & Interfaces
+
+```typescript
+// ✅ CORRECT: PascalCase, descriptive names
+
+// Interfaces: noun, describing the shape
+interface Asset {
+  id: string;
+  assetCode: string;
+  type: string;
+}
+
+interface User {
+  id: string;
+  email: string;
+  name: string;
+  systemRole?: string | null;   // ⭐ System Administrators role
+}
+
+// Types: noun or adjective + noun
+type AssetStatus = 'operational' | 'inactive' | 'maintenance';
+type UserRole = 'System Administrators' | 'admin' | 'manager' | 'technician' | 'field_ops';  // ⭐ includes System Administrators
+type MaintenanceType = 'immediate' | 'scheduled';
+
+// Props: ComponentName + 'Props'
+interface AssetCardProps {
+  asset: Asset;
+  onEdit?: () => void;
+  onDelete?: () => void;
+}
+
+interface CompanyListProps {           // ⭐ Admin component props
+  companies: Company[];
+  onSelect?: (id: string) => void;
+}
+
+// Generic types: descriptive single letter or word
+type Result<T, E = Error> = { success: true; data: T } | { success: false; error: E };
+type Nullable<T> = T | null;
+type AsyncFn<TArgs extends any[], TReturn> = (...args: TArgs) => Promise<TReturn>;
+
+// ❌ WRONG: Unclear or inconsistent
+interface asset { }                       // Should be PascalCase
+interface IAsset { }                      // No 'I' prefix (not C#)
+type Props { }                            // Too generic
+interface AssetCardProperties { }        // Use 'Props' suffix
+type T = 'operational' | 'inactive';      // Use descriptive name
+```
+
+## Summary
+
+### Key Principles
+
+- **Consistency**: Uniform coding patterns across all files and components
+- **Type Safety**: Full TypeScript integration with proper type definitions
+- **Security**: Secure coding practices and input validation
+- **Maintainability**: Clean, readable code with clear structure
+- **Performance**: Optimized patterns for backend and database operations
+
+### Benefits
+
+- **Consistency**: Uniform patterns across all files and components
+- **Type Safety**: Full TypeScript integration with proper type definitions
+- **Security**: Secure coding practices and input validation
+- **Maintainability**: Clean, readable code with clear structure
+- **Performance**: Optimized patterns for backend and database operations

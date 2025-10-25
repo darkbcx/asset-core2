@@ -1,0 +1,208 @@
+---
+title: Layered Architecture Specification
+description: Next.js App Router project architecture with clear separation of concerns
+alwaysApply: true
+---
+
+# Layered Architecture Specification
+
+## Overview
+
+AssetCore implements a layered architecture that organizes a Next.js App Router project into clear, decoupled layers. This design allows the frontend and backend logic to evolve independently while supporting future migration of backend logic to other frameworks (e.g., Hono or Express) with minimal refactoring.
+
+### Key Benefits
+
+- **Separation of Concerns**: Clear boundaries between UI, API, business logic, and data access
+- **Framework Independence**: Backend logic is decoupled from Next.js runtime
+- **Type Safety**: Shared TypeScript types across all layers
+- **Migration Ready**: Easy transition to external backend services
+- **Developer Experience**: Clean, maintainable codebase structure
+
+## Project Structure
+
+### Folder Organization
+
+```
+src/
+├── app/                     # Frontend (Next.js App Router)
+│   ├── api/                 # API controllers (Next.js route handlers)
+│   │   └── users/
+│   │       └── route.ts
+│   ├── users/
+│   │   └── page.tsx         # Example UI page
+│   └── layout.tsx
+│
+├── backend/                 # Business logic & repositories
+│   ├── users.ts
+│   └── jobs.ts
+│
+├── lib/                     # Shared utilities
+│   ├── db.ts                # Database connector (mysql2)
+│   ├── apiClient.ts         # Frontend SDK (fetch wrapper)
+│   └── validators.ts        # Zod schemas, etc.
+│
+└── types/                   # Shared TypeScript types
+    ├── user.ts
+    └── job.ts
+```
+
+## Layer Responsibilities
+
+| **Layer**                     | **Folder Example**                    | **Purpose**                                                                         | **Depends On**             | **Migration to Hono/Express**     |
+| ----------------------------- | ------------------------------------- | ----------------------------------------------------------------------------------- | -------------------------- | --------------------------------- |
+| **UI / Presentation**         | `src/app/`                            | React components, pages, and hooks. Renders UI and calls the API client.            | ✅ `apiClient.ts`          | Unchanged                         |
+| **API Controllers**           | `src/app/api/.../route.ts`            | Next.js route handlers that map HTTP requests → backend calls.                      | ✅ `src/backend/`          | Replaced by new backend routes    |
+| **Backend (Business Logic)**  | `src/backend/*.ts`                    | Core logic (repositories, services, data access). Stateless and framework-agnostic. | ✅ `lib/db.ts`, validators | Moved directly to backend service |
+| **Data Access**               | `src/lib/db.ts`                       | Handles DB connections (mysql2).                                                    | ❌                         | Move with backend                 |
+| **API Client (Frontend SDK)** | `src/lib/apiClient.ts`                | Typed fetch wrapper for frontend. Encapsulates API URL logic.                       | ❌                         | Update base URL only              |
+| **Types / Schemas**           | `src/types/`, `src/lib/validators.ts` | Shared type definitions and validation schemas.                                     | ✅ All layers              | Move to `packages/shared`         |
+| **External Systems**          | —                                     | Third-party integrations (Auth, Storage, etc.).                                     | ✅ Backend                 | Remain backend-side               |
+
+## Request Flow Architecture
+
+### Data Flow Pattern
+
+```
+[ React UI (app/users/page.tsx) ]
+          │
+          ▼
+[ API Client (lib/apiClient.ts) ]
+          │
+          ▼
+[ API Controller (app/api/users/route.ts) ]
+          │
+          ▼
+[ Backend Logic (backend/users.ts) ]
+          │
+          ▼
+[ Database / External Services (lib/db.ts) ]
+```
+
+### Example Implementation Flow
+
+This demonstrates the complete data flow when a user requests information through the layered architecture:
+
+| Layer          | File                               | Example Function                              |
+| -------------- | ---------------------------------- | --------------------------------------------- |
+| UI             | `/src/app/users/page.tsx`          | `apiClient.getUser("u1")`                     |
+| API Client     | `lib/apiClient.ts`                 | `fetch('/users/'+ userId)`                    |
+| API Controller | `/src/app/api/users/[id]/route.ts` | Calls `getUserById()` from backend            |
+| Backend        | `/src/backend/users.ts`            | Implements `getUserById()` and `createUser()` |
+| Database       | `/src/lib/db.ts`                   | Uses mysql2 to query data                     |
+
+#### Flow Description
+
+1. **UI Layer**: React component calls the API client to fetch user data
+2. **API Client**: Typed wrapper makes HTTP request to the API endpoint
+3. **API Controller**: Next.js route handler receives request and delegates to backend
+4. **Backend Layer**: Business logic processes the request and queries the database
+5. **Database Layer**: mysql2 connection executes the SQL query and returns results
+
+This flow ensures clean separation of concerns while maintaining type safety across all layers.
+
+## Design Principles
+
+### Core Architectural Principles
+
+1. **Thin Controllers**
+
+   - API routes (`/app/api`) should only handle request/response logic
+   - No business logic in route handlers
+   - Focus on HTTP concerns (validation, serialization, error handling)
+
+2. **Business Logic Isolation**
+
+   - All backend logic lives in `/backend`, decoupled from Next.js runtime
+   - Framework-agnostic business logic
+   - Stateless service functions
+
+3. **Single Source of Truth for Types**
+
+   - All DTOs and schemas defined in `/types` or `/lib/validators`
+   - Shared type definitions across frontend and backend
+   - Zod schemas for runtime validation
+
+4. **Future Portability**
+
+   - `/backend` and `/types` can be moved to another platform with no rewrite
+   - No Next.js-specific dependencies in business logic
+   - Clean separation enables microservice migration
+
+5. **Minimal Frontend Coupling**
+   - Frontend interacts only via `apiClient`, not raw fetch or database
+   - No direct database access from UI components
+   - Centralized API communication
+
+## Migration Strategy
+
+### Future Backend Migration
+
+When migrating backend logic to external services:
+
+```
+apps/
+  frontend/   ← Next.js app
+  backend/    ← Hono / Express app
+packages/
+  shared/     ← Former /backend and /types code
+```
+
+#### Migration Steps
+
+1. **Move Business Logic**
+
+   - Move `/src/backend` → `packages/shared/backend`
+   - Move `/src/types` → `packages/shared/types`
+   - Update import paths
+
+2. **Update API Client**
+
+   - Update `apiClient` base URL (`NEXT_PUBLIC_API_URL`)
+   - Modify authentication handling if needed
+   - Update error handling for external service
+
+3. **Frontend Compatibility**
+   - Frontend remains fully functional
+   - No changes required to React components
+   - API client abstracts external service details
+
+## Implementation Guidelines
+
+### Backend Layer (`src/backend/`)
+
+- **Pure Functions**: Business logic functions should be pure and testable
+- **No Framework Dependencies**: Avoid Next.js-specific imports
+- **Database Abstraction**: Use database connection from `lib/db.ts`
+- **Error Handling**: Consistent error handling and validation
+
+### API Controller Layer (`src/app/api/`)
+
+- **Request Validation**: Validate incoming requests using Zod schemas
+- **Response Serialization**: Format responses consistently
+- **Error Handling**: Handle HTTP errors and return appropriate status codes
+- **Authentication**: Validate JWT tokens and user permissions
+
+### Frontend Layer (`src/app/`)
+
+- **Component Logic**: Focus on UI logic and user interactions
+- **API Communication**: Use `apiClient` for all backend communication
+- **State Management**: Use React hooks and context for local state
+- **Error Boundaries**: Implement error boundaries for graceful error handling
+
+### Shared Layer (`src/lib/` & `src/types/`)
+
+- **Database Connection**: Centralized database connection management
+- **API Client**: Typed wrapper for HTTP requests
+- **Validation Schemas**: Zod schemas for request/response validation
+- **Type Definitions**: Shared TypeScript interfaces and types
+
+## Benefits
+
+This layered architecture provides:
+
+- **Clear separation of concerns** between UI, API, and business logic
+- **Type-safe contracts** between frontend and backend layers
+- **Easy future migration** to external backend services
+- **Clean developer ergonomics** for fullstack TypeScript development
+- **Maintainable codebase** with well-defined boundaries
+- **Testable architecture** with isolated, pure functions

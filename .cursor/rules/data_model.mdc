@@ -1,0 +1,564 @@
+---
+title: Data Model & Database Schema
+description: Comprehensive database schema design for AssetCore multi-tenant asset management system
+alwaysApply: true
+---
+
+# Data Model & Database Schema
+
+## Overview
+
+AssetCore implements a comprehensive database schema designed for multi-tenant asset and component management. The schema ensures complete data isolation between organizations while providing efficient querying capabilities for asset tracking, maintenance management, and operational analytics.
+
+### Key Design Principles
+
+- **Multi-Tenant Architecture**: Complete data isolation using company_id foreign keys
+- **Referential Integrity**: Proper foreign key constraints and cascade operations
+- **Audit Trail**: Comprehensive logging for compliance and security
+- **Performance Optimization**: Strategic indexing for efficient queries
+- **Data Integrity**: Unique constraints and validation rules
+- **Scalability**: Designed to handle large datasets with optimal performance
+
+## Core Entities
+
+### Company (Tenant)
+
+**Purpose:** Represents tenant organizations with isolated data and configuration.
+
+| Field               | Type         | Description                    | Constraints      |
+| ------------------- | ------------ | ------------------------------ | ---------------- |
+| `id`                | UUID         | Primary key                    | NOT NULL, UNIQUE |
+| `name`              | VARCHAR(255) | Company name                   | NOT NULL         |
+| `slug`              | VARCHAR(100) | URL-friendly identifier        | NOT NULL, UNIQUE |
+| `domain`            | VARCHAR(255) | Custom domain for SSO          | NULLABLE         |
+| `settings`          | JSONB        | Company-specific configuration | DEFAULT '{}'     |
+| `subscription_plan` | VARCHAR(50)  | Current subscription tier      | DEFAULT 'basic'  |
+| `is_active`         | BOOLEAN      | Account status                 | DEFAULT true     |
+| `created_at`        | TIMESTAMP    | Creation timestamp             | NOT NULL         |
+| `updated_at`        | TIMESTAMP    | Last update timestamp          | NOT NULL         |
+
+**Key Features:**
+
+- Unique slug for URL-friendly identification
+- JSONB settings for flexible configuration
+- Subscription plan tracking for billing
+- Soft delete capability with is_active flag
+
+### User
+
+**Purpose:** System users with role-based access control supporting both tenant-specific users and platform-wide system administrators.
+
+| Field           | Type         | Description                                  | Constraints      |
+| --------------- | ------------ | -------------------------------------------- | ---------------- |
+| `id`            | UUID         | Primary key                                  | NOT NULL, UNIQUE |
+| `user_type`     | VARCHAR(20)  | User type: 'tenant' or 'system_admin'        | NOT NULL         |
+| `email`         | VARCHAR(255) | User email address                           | NOT NULL, UNIQUE |
+| `first_name`    | VARCHAR(100) | User's first name                            | NOT NULL         |
+| `last_name`     | VARCHAR(100) | User's last name                             | NOT NULL         |
+| `is_active`     | BOOLEAN      | Account status                               | DEFAULT true     |
+| `last_login`    | TIMESTAMP    | Last login timestamp                         | NULLABLE         |
+| `password_hash` | VARCHAR(255) | Hashed password for authentication           | NOT NULL         |
+| `created_at`    | TIMESTAMP    | Creation timestamp                           | NOT NULL         |
+| `updated_at`    | TIMESTAMP    | Last update timestamp                        | NOT NULL         |
+
+**Key Features:**
+
+- **Dual User Types**: Supports both tenant users and system administrators
+- **Multi-Company Support**: Users can be associated with multiple companies via UserCompany
+- **Security Features**: Password hashing and login tracking
+- **Soft Delete**: Account deactivation with is_active flag
+- **Global User Identity**: Single user account across multiple organizations
+
+**User Type Definitions:**
+
+#### Tenant Users (associated via UserCompany table)
+
+- **Maintenance Technician**: Field workers executing maintenance tasks
+- **Asset Manager**: Asset portfolio oversight and maintenance planning
+- **Operations Supervisor**: Operational continuity and performance monitoring
+- **Company Administrator**: Company-wide configuration and user management
+
+#### System Administrators (no company associations)
+
+- **Super Administrator**: Platform-wide management and configuration
+- **Support Administrator**: Technical support and user assistance
+
+### UserCompany
+
+**Purpose:** Many-to-many relationship between users and companies, storing role and permissions for each company association.
+
+| Field           | Type         | Description                                  | Constraints      |
+| --------------- | ------------ | -------------------------------------------- | ---------------- |
+| `id`            | UUID         | Primary key                                  | NOT NULL, UNIQUE |
+| `user_id`       | UUID         | Foreign key to User                          | NOT NULL, FK     |
+| `company_id`    | UUID         | Foreign key to Company                       | NOT NULL, FK     |
+| `role`          | VARCHAR(50)  | User role within this company                | NOT NULL         |
+| `permissions`   | JSONB        | Company-specific permissions                 | DEFAULT '{}'     |
+| `is_active`     | BOOLEAN      | Association status                            | DEFAULT true     |
+| `is_primary`    | BOOLEAN      | Primary company for user                     | DEFAULT false    |
+| `joined_at`     | TIMESTAMP    | When user joined this company                | NOT NULL         |
+| `created_at`    | TIMESTAMP    | Creation timestamp                           | NOT NULL         |
+| `updated_at`    | TIMESTAMP    | Last update timestamp                        | NOT NULL         |
+
+**Key Features:**
+
+- **Multi-Company Access**: Users can be associated with multiple companies
+- **Company-Specific Roles**: Different roles for each company association
+- **Granular Permissions**: Company-specific permission configuration
+- **Primary Company**: Designates user's primary organization
+- **Association Management**: Track when users join/leave companies
+- **Soft Delete**: Deactivate associations without losing history
+
+**Business Rules:**
+
+- Each user can have only one primary company (`is_primary = true`)
+- System administrators (user_type = 'system_admin') have no UserCompany records
+- Tenant users (user_type = 'tenant') must have at least one UserCompany record
+- Users can have different roles and permissions in different companies
+
+## User Role Hierarchy & Permissions
+
+### Role-Based Access Control (RBAC)
+
+The AssetCore system implements a comprehensive role-based access control system that supports both tenant-specific and platform-wide user management.
+
+#### Tenant User Roles
+
+**Role Hierarchy (from highest to lowest privilege):**
+
+1. **Company Administrator**
+
+   - Full administrative access within company scope
+   - User management and role configuration
+   - Company settings and configuration
+   - Data management and system integration
+
+2. **Asset Manager**
+
+   - Full access to company's asset and component data
+   - Create and manage maintenance schedules
+   - Generate reports and analytics
+   - Manage technician assignments
+   - Configure maintenance standards and procedures
+
+3. **Operations Supervisor**
+
+   - Read-only access to all asset and maintenance data
+   - Generate operational reports
+   - View maintenance schedules and impact
+   - Access to analytics and performance metrics
+
+4. **Maintenance Technician**
+   - View assigned assets and components
+   - Create and update maintenance records
+   - Upload attachments and documentation
+   - Update component status (installed, repairing, removed)
+
+#### System Administrator Roles
+
+**Role Hierarchy (from highest to lowest privilege):**
+
+1. **Super Administrator**
+
+   - Full access to all organizations and data
+   - Platform configuration and system settings
+   - User management across all tenants
+   - System monitoring and maintenance
+   - Security and compliance management
+
+2. **Support Administrator**
+   - Read access to all tenant data
+   - User support and training capabilities
+   - Data migration and import tools
+   - Issue tracking and resolution access
+
+### Permission System
+
+The `permissions` JSONB field allows for granular permission configuration:
+
+```json
+{
+  "assets": {
+    "create": true,
+    "read": true,
+    "update": true,
+    "delete": false
+  },
+  "maintenance": {
+    "create": true,
+    "read": true,
+    "update": true,
+    "delete": false,
+    "assign": true
+  },
+  "users": {
+    "create": false,
+    "read": true,
+    "update": false,
+    "delete": false
+  },
+  "reports": {
+    "generate": true,
+    "export": true
+  }
+}
+```
+
+### Security Considerations
+
+- **Tenant Isolation**: Tenant users can only access data within their assigned company
+- **System Admin Override**: System administrators can access all tenant data when needed
+- **Permission Inheritance**: Higher-level roles inherit permissions from lower-level roles
+- **Audit Trail**: All permission changes and access attempts are logged
+- **Session Management**: JWT tokens include user type and permissions for authorization
+
+### Asset
+
+**Purpose:** Physical assets owned by companies with comprehensive tracking capabilities.
+
+| Field             | Type          | Description                          | Constraints      |
+| ----------------- | ------------- | ------------------------------------ | ---------------- |
+| `id`              | UUID          | Primary key                          | NOT NULL, UNIQUE |
+| `company_id`      | UUID          | Foreign key to Company               | NOT NULL, FK     |
+| `asset_code`      | VARCHAR(100)  | Unique asset identifier              | NOT NULL         |
+| `name`            | VARCHAR(255)  | Asset name/description               | NOT NULL         |
+| `type`            | VARCHAR(100)  | Asset type (aircraft, vehicle, etc.) | NOT NULL         |
+| `model`           | VARCHAR(255)  | Asset model/manufacturer             | NULLABLE         |
+| `serial_number`   | VARCHAR(255)  | Manufacturer serial number           | NULLABLE         |
+| `status`          | VARCHAR(50)   | Current operational status           | NOT NULL         |
+| `location_id`     | UUID          | Foreign key to Location              | NULLABLE, FK     |
+| `purchase_date`   | DATE          | Asset acquisition date               | NULLABLE         |
+| `warranty_expiry` | DATE          | Warranty expiration date             | NULLABLE         |
+| `purchase_cost`   | DECIMAL(15,2) | Original purchase price              | NULLABLE         |
+| `current_value`   | DECIMAL(15,2) | Current estimated value              | NULLABLE         |
+| `specifications`  | JSONB         | Additional asset specifications      | DEFAULT '{}'     |
+| `created_at`      | TIMESTAMP     | Creation timestamp                   | NOT NULL         |
+| `updated_at`      | TIMESTAMP     | Last update timestamp                | NOT NULL         |
+
+**Key Features:**
+
+- Unique asset codes within company scope
+- Flexible specifications using JSONB
+- Financial tracking with purchase and current values
+- Location-based asset organization
+- Status tracking for operational management
+
+### Component
+
+**Purpose:** Individual components within assets with detailed tracking and maintenance history.
+
+| Field               | Type          | Description                 | Constraints      |
+| ------------------- | ------------- | --------------------------- | ---------------- |
+| `id`                | UUID          | Primary key                 | NOT NULL, UNIQUE |
+| `asset_id`          | UUID          | Foreign key to Asset        | NOT NULL, FK     |
+| `component_code`    | VARCHAR(100)  | Unique component identifier | NOT NULL         |
+| `name`              | VARCHAR(255)  | Component name/description  | NOT NULL         |
+| `type`              | VARCHAR(100)  | Component type              | NOT NULL         |
+| `serial_number`     | VARCHAR(255)  | Component serial number     | NULLABLE         |
+| `part_number`       | VARCHAR(255)  | Manufacturer part number    | NULLABLE         |
+| `manufacturer`      | VARCHAR(255)  | Component manufacturer      | NULLABLE         |
+| `position`          | VARCHAR(100)  | Position within asset       | NULLABLE         |
+| `status`            | VARCHAR(50)   | Current component status    | NOT NULL         |
+| `installation_date` | DATE          | Date of installation        | NULLABLE         |
+| `warranty_expiry`   | DATE          | Component warranty expiry   | NULLABLE         |
+| `purchase_cost`     | DECIMAL(15,2) | Component purchase price    | NULLABLE         |
+| `specifications`    | JSONB         | Additional specifications   | DEFAULT '{}'     |
+| `created_at`        | TIMESTAMP     | Creation timestamp          | NOT NULL         |
+| `updated_at`        | TIMESTAMP     | Last update timestamp       | NOT NULL         |
+
+**Key Features:**
+
+- Component-level granularity for detailed tracking
+- Position tracking within assets
+- Warranty and cost management
+- Flexible specifications with JSONB
+- Status tracking for maintenance planning
+
+### MaintenanceRecord
+
+**Purpose:** Comprehensive maintenance activities and work order management.
+
+| Field                    | Type          | Description                        | Constraints      |
+| ------------------------ | ------------- | ---------------------------------- | ---------------- |
+| `id`                     | UUID          | Primary key                        | NOT NULL, UNIQUE |
+| `component_id`           | UUID          | Foreign key to Component           | NOT NULL, FK     |
+| `assigned_technician_id` | UUID          | Foreign key to User                | NULLABLE, FK     |
+| `title`                  | VARCHAR(255)  | Maintenance title/description      | NOT NULL         |
+| `description`            | TEXT          | Detailed maintenance description   | NULLABLE         |
+| `priority`               | VARCHAR(20)   | Maintenance priority level         | NOT NULL         |
+| `status`                 | VARCHAR(50)   | Current maintenance status         | NOT NULL         |
+| `reported_date`          | TIMESTAMP     | Issue report timestamp             | NOT NULL         |
+| `scheduled_date`         | TIMESTAMP     | Scheduled maintenance date         | NULLABLE         |
+| `started_date`           | TIMESTAMP     | Maintenance start timestamp        | NULLABLE         |
+| `completed_date`         | TIMESTAMP     | Maintenance completion timestamp   | NULLABLE         |
+| `estimated_duration`     | INTEGER       | Estimated duration in minutes      | NULLABLE         |
+| `actual_duration`        | INTEGER       | Actual duration in minutes         | NULLABLE         |
+| `labor_cost`             | DECIMAL(15,2) | Labor cost for maintenance         | NULLABLE         |
+| `parts_cost`             | DECIMAL(15,2) | Parts cost for maintenance         | NULLABLE         |
+| `total_cost`             | DECIMAL(15,2) | Total maintenance cost             | NULLABLE         |
+| `notes`                  | TEXT          | Maintenance notes and observations | NULLABLE         |
+| `created_at`             | TIMESTAMP     | Creation timestamp                 | NOT NULL         |
+| `updated_at`             | TIMESTAMP     | Last update timestamp              | NOT NULL         |
+
+**Key Features:**
+
+- Complete maintenance lifecycle tracking
+- Cost analysis with labor and parts breakdown
+- Time tracking for efficiency analysis
+- Priority and status management
+- Technician assignment and tracking
+
+### Location
+
+**Purpose:** Hierarchical location management for asset organization and tracking.
+
+| Field         | Type         | Description                                 | Constraints      |
+| ------------- | ------------ | ------------------------------------------- | ---------------- |
+| `id`          | UUID         | Primary key                                 | NOT NULL, UNIQUE |
+| `company_id`  | UUID         | Foreign key to Company                      | NOT NULL, FK     |
+| `parent_id`   | UUID         | Foreign key to Location (self-reference)    | NULLABLE, FK     |
+| `name`        | VARCHAR(255) | Location name                               | NOT NULL         |
+| `type`        | VARCHAR(50)  | Location type (site, building, floor, room) | NOT NULL         |
+| `address`     | TEXT         | Physical address                            | NULLABLE         |
+| `coordinates` | POINT        | GPS coordinates                             | NULLABLE         |
+| `is_active`   | BOOLEAN      | Location status                             | DEFAULT true     |
+| `created_at`  | TIMESTAMP    | Creation timestamp                          | NOT NULL         |
+| `updated_at`  | TIMESTAMP    | Last update timestamp                       | NOT NULL         |
+
+**Key Features:**
+
+- Hierarchical location structure
+- GPS coordinate support
+- Flexible location types
+- Company-scoped organization
+
+## Supporting Entities
+
+### ComponentTransfer
+
+**Purpose:** Track component transfers between assets with full audit trail.
+
+| Field           | Type         | Description                 | Constraints      |
+| --------------- | ------------ | --------------------------- | ---------------- |
+| `id`            | UUID         | Primary key                 | NOT NULL, UNIQUE |
+| `component_id`  | UUID         | Foreign key to Component    | NOT NULL, FK     |
+| `from_asset_id` | UUID         | Source asset                | NOT NULL, FK     |
+| `to_asset_id`   | UUID         | Destination asset           | NOT NULL, FK     |
+| `transfer_date` | TIMESTAMP    | Transfer timestamp          | NOT NULL         |
+| `reason`        | VARCHAR(255) | Transfer reason             | NULLABLE         |
+| `performed_by`  | UUID         | User who performed transfer | NOT NULL, FK     |
+| `notes`         | TEXT         | Transfer notes              | NULLABLE         |
+
+**Key Features:**
+
+- Complete transfer history tracking
+- User accountability with performed_by field
+- Reason and notes for transfer documentation
+
+### MaintenanceAttachment
+
+**Purpose:** File attachments for maintenance records with metadata tracking.
+
+| Field                   | Type         | Description                      | Constraints      |
+| ----------------------- | ------------ | -------------------------------- | ---------------- |
+| `id`                    | UUID         | Primary key                      | NOT NULL, UNIQUE |
+| `maintenance_record_id` | UUID         | Foreign key to MaintenanceRecord | NOT NULL, FK     |
+| `file_name`             | VARCHAR(255) | Original file name               | NOT NULL         |
+| `file_path`             | VARCHAR(500) | Storage path                     | NOT NULL         |
+| `file_size`             | BIGINT       | File size in bytes               | NOT NULL         |
+| `mime_type`             | VARCHAR(100) | File MIME type                   | NOT NULL         |
+| `uploaded_by`           | UUID         | User who uploaded file           | NOT NULL, FK     |
+| `uploaded_at`           | TIMESTAMP    | Upload timestamp                 | NOT NULL         |
+
+**Key Features:**
+
+- File metadata tracking
+- User accountability for uploads
+- Storage path management
+
+### AuditLog
+
+**Purpose:** Comprehensive system audit trail for compliance and security monitoring.
+
+| Field         | Type         | Description            | Constraints      |
+| ------------- | ------------ | ---------------------- | ---------------- |
+| `id`          | UUID         | Primary key            | NOT NULL, UNIQUE |
+| `company_id`  | UUID         | Foreign key to Company | NOT NULL, FK     |
+| `user_id`     | UUID         | Foreign key to User    | NULLABLE, FK     |
+| `action`      | VARCHAR(100) | Action performed       | NOT NULL         |
+| `entity_type` | VARCHAR(100) | Entity affected        | NOT NULL         |
+| `entity_id`   | UUID         | Entity identifier      | NOT NULL         |
+| `old_values`  | JSONB        | Previous values        | NULLABLE         |
+| `new_values`  | JSONB        | New values             | NULLABLE         |
+| `ip_address`  | INET         | User IP address        | NULLABLE         |
+| `user_agent`  | TEXT         | User agent string      | NULLABLE         |
+| `created_at`  | TIMESTAMP    | Action timestamp       | NOT NULL         |
+
+**Key Features:**
+
+- Complete audit trail for all system actions
+- Before/after value tracking
+- Security context with IP and user agent
+- Company-scoped audit isolation
+
+### Files
+
+**Purpose:** File attachments for assets, components, and maintenance records with comprehensive metadata tracking.
+
+| Field             | Type         | Description                                 | Constraints      |
+| ----------------- | ------------ | ------------------------------------------- | ---------------- |
+| `id`              | UUID         | Primary key                                 | NOT NULL, UNIQUE |
+| `company_id`      | UUID         | Foreign key to Company                      | NOT NULL, FK     |
+| `entity_type`     | VARCHAR(50)  | Entity type (asset, component, maintenance) | NOT NULL         |
+| `entity_id`       | UUID         | Entity identifier                           | NOT NULL         |
+| `file_name`       | VARCHAR(255) | Generated file name                         | NOT NULL         |
+| `original_name`   | VARCHAR(255) | Original file name                          | NOT NULL         |
+| `file_path`       | VARCHAR(500) | Storage path                                | NOT NULL         |
+| `file_size`       | BIGINT       | File size in bytes                          | NOT NULL         |
+| `mime_type`       | VARCHAR(100) | File MIME type                              | NOT NULL         |
+| `file_hash`       | VARCHAR(64)  | SHA-256 hash for deduplication              | NOT NULL         |
+| `storage_backend` | VARCHAR(50)  | Storage backend (local, s3, hybrid)         | NOT NULL         |
+| `storage_path`    | VARCHAR(500) | Backend-specific storage path               | NOT NULL         |
+| `metadata`        | JSONB        | Additional file metadata                    | DEFAULT '{}'     |
+| `is_public`       | BOOLEAN      | Public access flag                          | DEFAULT false    |
+| `uploaded_by`     | UUID         | Foreign key to User                         | NOT NULL, FK     |
+| `uploaded_at`     | TIMESTAMP    | Upload timestamp                            | NOT NULL         |
+| `updated_at`      | TIMESTAMP    | Last update timestamp                       | NOT NULL         |
+| `deleted_at`      | TIMESTAMP    | Soft delete timestamp                       | NULLABLE         |
+
+**Key Features:**
+
+- Multi-tenant file isolation with company_id
+- Entity-agnostic file attachment system
+- File deduplication using SHA-256 hashes
+- Multiple storage backend support
+- Soft delete capability for audit trails
+- Comprehensive metadata tracking
+
+### FileVersions
+
+**Purpose:** Track file version history and changes with full audit trail.
+
+| Field                | Type         | Description                   | Constraints      |
+| -------------------- | ------------ | ----------------------------- | ---------------- |
+| `id`                 | UUID         | Primary key                   | NOT NULL, UNIQUE |
+| `file_id`            | UUID         | Foreign key to Files          | NOT NULL, FK     |
+| `version_number`     | INTEGER      | Version number                | NOT NULL         |
+| `file_path`          | VARCHAR(500) | Version-specific storage path | NOT NULL         |
+| `file_size`          | BIGINT       | File size in bytes            | NOT NULL         |
+| `file_hash`          | VARCHAR(64)  | SHA-256 hash of this version  | NOT NULL         |
+| `change_description` | TEXT         | Description of changes made   | NULLABLE         |
+| `created_by`         | UUID         | Foreign key to User           | NOT NULL, FK     |
+| `created_at`         | TIMESTAMP    | Version creation timestamp    | NOT NULL         |
+
+**Key Features:**
+
+- Complete file version history tracking
+- Change description for audit purposes
+- User accountability for version creation
+- Efficient version storage and retrieval
+
+### FileAccessLogs
+
+**Purpose:** Comprehensive audit trail for file access and security monitoring.
+
+| Field         | Type        | Description                               | Constraints      |
+| ------------- | ----------- | ----------------------------------------- | ---------------- |
+| `id`          | UUID        | Primary key                               | NOT NULL, UNIQUE |
+| `file_id`     | UUID        | Foreign key to Files                      | NOT NULL, FK     |
+| `user_id`     | UUID        | Foreign key to User                       | NULLABLE, FK     |
+| `action`      | VARCHAR(50) | Action performed (view, download, delete) | NOT NULL         |
+| `ip_address`  | INET        | User IP address                           | NULLABLE         |
+| `user_agent`  | TEXT        | User agent string                         | NULLABLE         |
+| `accessed_at` | TIMESTAMP   | Access timestamp                          | NOT NULL         |
+
+**Key Features:**
+
+- Complete file access audit trail
+- Security context with IP and user agent tracking
+- Support for anonymous access logging
+- Compliance and security monitoring
+
+## Database Relationships
+
+### Primary Relationships
+
+The core entity relationships form the foundation of the AssetCore data model:
+
+- **Company ↔ Users (M:N)**: Many-to-many relationship via UserCompany table
+- **Company → Assets (1:N)**: Each company owns multiple assets
+- **Company → Locations (1:N)**: Each company manages multiple locations
+- **Asset → Components (1:N)**: Each asset contains multiple components
+- **Component → MaintenanceRecords (1:N)**: Each component has multiple maintenance records
+- **User → MaintenanceRecords (1:N)**: Users can be assigned to multiple maintenance tasks
+- **Location → Assets (1:N)**: Assets can be located at specific locations
+- **Location → Locations (1:N)**: Hierarchical location structure
+
+### Supporting Relationships
+
+Additional relationships support advanced functionality:
+
+- **User → UserCompany (1:N)**: Users can have multiple company associations
+- **Company → UserCompany (1:N)**: Companies can have multiple user associations
+- **MaintenanceRecord → MaintenanceAttachments (1:N)**: Maintenance records can have multiple file attachments
+- **Component → ComponentTransfers (1:N)**: Components can have multiple transfer records
+- **Files → FileVersions (1:N)**: Files can have multiple versions
+- **Files → FileAccessLogs (1:N)**: Files can have multiple access log entries
+- **All entities → Files (1:N)**: All entities can have multiple file attachments
+- **All entities → AuditLog (1:N)**: All entities generate audit log entries
+
+## Data Integrity & Constraints
+
+### Unique Constraints
+
+Ensuring data uniqueness across the system:
+
+- **Company slug**: Must be unique across all companies for URL identification
+- **User email**: Must be unique across all users (both tenant and system admin)
+- **UserCompany combination**: Each user can only have one active association per company
+- **UserCompany primary**: Each user can have only one primary company
+- **Asset code**: Must be unique within each company for asset identification
+- **Component code**: Must be unique within each asset for component tracking
+
+### Foreign Key Constraints
+
+Maintaining referential integrity:
+
+- **Referential Integrity**: All foreign keys maintain proper relationships
+- **Cascade Operations**: Configured appropriately for data consistency
+- **Soft Deletes**: Implemented for critical entities to maintain audit trails
+
+### Indexing Strategy
+
+Optimizing query performance with strategic indexes:
+
+- **Primary Keys**: Clustered indexes for efficient primary key lookups
+- **Foreign Keys**: Non-clustered indexes for join operations
+- **Search Fields**: Full-text indexes for asset and component search
+- **Status Fields**: Filtered indexes for status-based queries
+- **Timestamp Fields**: Indexes for time-based queries and reporting
+
+## Database Implementation Guidelines
+
+### MySQL 8.x Specific Features
+
+- **UUID Support**: Using UUID data type for primary keys
+- **JSONB Support**: Leveraging JSON data type for flexible specifications
+- **Spatial Data**: Using POINT data type for GPS coordinates
+- **Generated Columns**: For computed fields and derived data
+
+### Performance Considerations
+
+- **Connection Pooling**: Using mysql2 connection pooling for optimal performance
+- **Query Optimization**: Prepared statements for SQL injection prevention
+- **Index Maintenance**: Regular index analysis and optimization
+- **Partitioning**: Table partitioning for large datasets
+
+### Security Implementation
+
+- **Data Encryption**: Encryption at rest for sensitive data
+- **Access Control**: Database-level access control with company isolation
+- **Audit Logging**: Comprehensive audit trail for all database operations
+- **Backup Strategy**: Automated backups with point-in-time recovery
+
+This comprehensive data model provides the foundation for AssetCore's multi-tenant asset management system, ensuring data integrity, performance, and security while supporting the complex requirements of asset and maintenance tracking.

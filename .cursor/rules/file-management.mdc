@@ -1,0 +1,870 @@
+---
+title: File Management System
+description: Comprehensive file upload, storage, and management specifications for AssetCore
+alwaysApply: true
+---
+
+# File Management System
+
+## Overview
+
+AssetCore implements a robust file management system designed to handle maintenance documentation, asset images, component specifications, and other file attachments. The system provides secure file storage, efficient retrieval, and comprehensive metadata tracking while maintaining multi-tenant data isolation.
+
+### Key Features
+
+- **Multi-tenant File Isolation**: Complete file separation between organizations
+- **Secure File Upload**: Validation, sanitization, and virus scanning
+- **Multiple Storage Backends**: Support for local, cloud, and hybrid storage
+- **File Versioning**: Track file changes and maintain history
+- **Metadata Management**: Comprehensive file information tracking
+- **Access Control**: Role-based file access permissions
+
+## File Types & Categories
+
+### Supported File Types
+
+#### Maintenance Documentation
+
+- **Images**: JPG, PNG, GIF, WebP (max 10MB)
+- **Documents**: PDF, DOC, DOCX, XLS, XLSX (max 25MB)
+- **Technical Drawings**: DWG, DXF, SVG (max 50MB)
+- **Videos**: MP4, AVI, MOV (max 100MB)
+
+#### Asset Documentation
+
+- **Asset Images**: JPG, PNG, WebP (max 5MB)
+- **Specification Sheets**: PDF, DOC, DOCX (max 15MB)
+- **Certificates**: PDF, JPG, PNG (max 10MB)
+- **Manuals**: PDF, DOC, DOCX (max 30MB)
+
+#### Component Documentation
+
+- **Component Images**: JPG, PNG, WebP (max 3MB)
+- **Part Drawings**: DWG, DXF, SVG (max 20MB)
+- **Datasheets**: PDF, DOC, DOCX (max 10MB)
+- **Warranty Documents**: PDF, JPG, PNG (max 5MB)
+
+### File Size Limits
+
+| Category               | Maximum Size | Recommended Size |
+| ---------------------- | ------------ | ---------------- |
+| **Thumbnail Images**   | 500KB        | 200KB            |
+| **Asset Images**       | 5MB          | 2MB              |
+| **Maintenance Photos** | 10MB         | 5MB              |
+| **Documents**          | 25MB         | 10MB             |
+| **Technical Drawings** | 50MB         | 20MB             |
+| **Videos**             | 100MB        | 50MB             |
+
+## File Storage Architecture
+
+### Storage Backend Options
+
+#### Local Storage
+
+```javascript
+// Local file system storage
+const storageConfig = {
+  type: "local",
+  basePath: "/uploads",
+  maxSize: "1TB",
+  backupEnabled: true,
+};
+```
+
+#### Cloud Storage (AWS S3)
+
+```javascript
+// AWS S3 configuration
+const storageConfig = {
+  type: "s3",
+  bucket: "assetcore-files",
+  region: "us-east-1",
+  maxSize: "10TB",
+  cdnEnabled: true,
+};
+```
+
+#### Hybrid Storage
+
+```javascript
+// Hybrid storage configuration
+const storageConfig = {
+  type: "hybrid",
+  hotStorage: "s3", // Recent files
+  coldStorage: "glacier", // Archived files
+  migrationPolicy: "30days",
+};
+```
+
+### File Organization Structure
+
+```
+uploads/
+├── companies/
+│   ├── {company_id}/
+│   │   ├── assets/
+│   │   │   ├── {asset_id}/
+│   │   │   │   ├── images/
+│   │   │   │   ├── documents/
+│   │   │   │   └── maintenance/
+│   │   │   └── components/
+│   │   │       ├── {component_id}/
+│   │   │       │   ├── images/
+│   │   │       │   ├── datasheets/
+│   │   │       │   └── warranties/
+│   │   │       └── maintenance/
+│   │   │           ├── {maintenance_id}/
+│   │   │           │   ├── photos/
+│   │   │           │   ├── reports/
+│   │   │           │   └── attachments/
+│   │   │           └── templates/
+│   │   └── shared/
+│   │       ├── templates/
+│   │       ├── logos/
+│   │       └── documents/
+│   └── system/
+│       ├── temp/
+│       └── cache/
+```
+
+## File Upload Implementation
+
+### Frontend Upload Component
+
+```typescript
+// File upload component with validation
+interface FileUploadProps {
+  maxSize: number;
+  allowedTypes: string[];
+  multiple?: boolean;
+  onUpload: (files: File[]) => Promise<void>;
+}
+
+const FileUpload: React.FC<FileUploadProps> = ({
+  maxSize,
+  allowedTypes,
+  multiple = false,
+  onUpload,
+}) => {
+  const [files, setFiles] = useState<File[]>([]);
+  const [uploading, setUploading] = useState(false);
+
+  const validateFile = (file: File): boolean => {
+    // Size validation
+    if (file.size > maxSize) {
+      throw new Error(`File size exceeds ${maxSize}MB limit`);
+    }
+
+    // Type validation
+    const fileExtension = file.name.split(".").pop()?.toLowerCase();
+    if (!allowedTypes.includes(fileExtension || "")) {
+      throw new Error(`File type ${fileExtension} not allowed`);
+    }
+
+    return true;
+  };
+
+  const handleFileSelect = (selectedFiles: FileList) => {
+    try {
+      const validFiles = Array.from(selectedFiles).filter(validateFile);
+      setFiles(validFiles);
+    } catch (error) {
+      // Handle validation errors
+      console.error("File validation failed:", error);
+    }
+  };
+
+  const handleUpload = async () => {
+    setUploading(true);
+    try {
+      await onUpload(files);
+      setFiles([]);
+    } catch (error) {
+      console.error("Upload failed:", error);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <div className="file-upload">
+      <input
+        type="file"
+        multiple={multiple}
+        onChange={(e) => e.target.files && handleFileSelect(e.target.files)}
+        accept={allowedTypes.map((type) => `.${type}`).join(",")}
+      />
+      <button onClick={handleUpload} disabled={uploading}>
+        {uploading ? "Uploading..." : "Upload Files"}
+      </button>
+    </div>
+  );
+};
+```
+
+### Backend Upload Handler
+
+#### API Controller Layer (Next.js Route Handler)
+
+```typescript
+// API route handler - thin controller
+import { uploadFile } from "@/backend/files";
+import { uploadSchema } from "@/lib/validators";
+
+export async function POST(request: Request) {
+  try {
+    // Parse form data
+    const formData = await request.formData();
+    const file = formData.get("file") as File;
+    const metadata = JSON.parse(formData.get("metadata") as string);
+
+    // Validate upload metadata
+    const validatedData = uploadSchema.parse(metadata);
+
+    // Delegate to business logic
+    const result = await uploadFile(file, validatedData);
+
+    return Response.json({
+      success: true,
+      fileId: result.id,
+      url: result.url,
+      metadata: result.metadata,
+    });
+  } catch (error) {
+    return Response.json(
+      { error: "File upload failed", details: error.message },
+      { status: 400 }
+    );
+  }
+}
+```
+
+#### Business Logic Layer (Backend)
+
+```typescript
+// src/backend/files.ts - Business logic for file operations
+import sharp from "sharp";
+import { z } from "zod";
+import { db } from "@/lib/db";
+import { FileValidator } from "./fileValidator";
+import { FileProcessor } from "./fileProcessor";
+import { FileStorage } from "./fileStorage";
+
+const uploadSchema = z.object({
+  entityType: z.enum(["asset", "component", "maintenance"]),
+  entityId: z.string().uuid(),
+  fileType: z.enum(["image", "document", "video"]),
+  description: z.string().optional(),
+});
+
+export async function uploadFile(file: File, metadata: any): Promise<FileRecord> {
+  // Validate upload metadata
+  const validatedData = uploadSchema.parse(metadata);
+
+  // Validate file
+  const validator = new FileValidator();
+  await validator.validateFile(file, validatedData.fileType);
+
+  // Process file
+  const processor = new FileProcessor();
+  const processedFile = await processor.processFile(file, validatedData);
+
+  // Store file
+  const storage = new FileStorage();
+  const fileRecord = await storage.storeFile(processedFile, validatedData);
+
+  return fileRecord;
+}
+
+export async function getFile(fileId: string, size?: string): Promise<Buffer | null> {
+  const storage = new FileStorage();
+  return await storage.getFile(fileId, size);
+}
+
+export async function deleteFile(fileId: string, userId: string): Promise<boolean> {
+  const storage = new FileStorage();
+  return await storage.deleteFile(fileId, userId);
+}
+
+export async function listFiles(
+  entityType: string,
+  entityId: string,
+  companyId: string
+): Promise<FileRecord[]> {
+  const query = `
+    SELECT * FROM files 
+    WHERE company_id = ? AND entity_type = ? AND entity_id = ? 
+    AND deleted_at IS NULL
+    ORDER BY uploaded_at DESC
+  `;
+  
+  const [rows] = await db.execute(query, [companyId, entityType, entityId]);
+  return rows as FileRecord[];
+}
+```
+
+#### File Validation Service
+
+```typescript
+// src/backend/fileValidator.ts
+export class FileValidator {
+  async validateFile(file: File, fileType: string): Promise<void> {
+    // File size validation
+    const maxSizes = {
+      image: 10 * 1024 * 1024, // 10MB
+      document: 25 * 1024 * 1024, // 25MB
+      video: 100 * 1024 * 1024, // 100MB
+    };
+
+    if (file.size > maxSizes[fileType]) {
+      throw new Error(`File size exceeds limit for ${fileType}`);
+    }
+
+    // MIME type validation
+    const allowedTypes = {
+      image: ["image/jpeg", "image/png", "image/webp"],
+      document: ["application/pdf", "application/msword"],
+      video: ["video/mp4", "video/avi"],
+    };
+
+    if (!allowedTypes[fileType].includes(file.type)) {
+      throw new Error(`Invalid file type for ${fileType}`);
+    }
+  }
+}
+```
+
+#### File Processing Service
+
+```typescript
+// src/backend/fileProcessor.ts
+export class FileProcessor {
+  async processFile(file: File, metadata: any): Promise<ProcessedFile> {
+    const buffer = Buffer.from(await file.arrayBuffer());
+
+    if (metadata.fileType === "image") {
+      // Generate thumbnails and optimize images
+      const thumbnail = await sharp(buffer)
+        .resize(200, 200, { fit: "cover" })
+        .jpeg({ quality: 80 })
+        .toBuffer();
+
+      const optimized = await sharp(buffer).jpeg({ quality: 85 }).toBuffer();
+
+      return {
+        original: buffer,
+        thumbnail,
+        optimized,
+        metadata: {
+          width: (await sharp(buffer).metadata()).width,
+          height: (await sharp(buffer).metadata()).height,
+          format: "jpeg",
+        },
+      };
+    }
+
+    return {
+      original: buffer,
+      metadata: {
+        size: buffer.length,
+        type: file.type,
+      },
+    };
+  }
+}
+```
+
+#### File Storage Service
+
+```typescript
+// src/backend/fileStorage.ts
+export class FileStorage {
+  async storeFile(processedFile: ProcessedFile, metadata: any): Promise<FileRecord> {
+    // Generate unique file path
+    const filePath = this.generateFilePath(metadata);
+    
+    // Store file in storage backend
+    await this.saveToStorage(processedFile, filePath);
+    
+    // Save file record to database
+    const fileRecord = await this.saveFileRecord(processedFile, metadata, filePath);
+    
+    return fileRecord;
+  }
+
+  async getFile(fileId: string, size?: string): Promise<Buffer | null> {
+    // Get file record from database
+    const fileRecord = await this.getFileRecord(fileId);
+    if (!fileRecord) return null;
+
+    // Load file from storage
+    const filePath = size ? `${fileRecord.storage_path}_${size}` : fileRecord.storage_path;
+    return await this.loadFromStorage(filePath);
+  }
+
+  async deleteFile(fileId: string, userId: string): Promise<boolean> {
+    // Soft delete file record
+    const query = `
+      UPDATE files 
+      SET deleted_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP 
+      WHERE id = ? AND company_id = ?
+    `;
+    
+    const [result] = await db.execute(query, [fileId, userId]);
+    return result.affectedRows > 0;
+  }
+
+  private generateFilePath(metadata: any): string {
+    const timestamp = Date.now();
+    const randomId = Math.random().toString(36).substring(2);
+    return `companies/${metadata.companyId}/${metadata.entityType}/${metadata.entityId}/${timestamp}_${randomId}`;
+  }
+
+  private async saveToStorage(processedFile: ProcessedFile, basePath: string): Promise<void> {
+    // Implementation depends on storage backend (local, S3, etc.)
+    // This is where the actual file storage logic goes
+  }
+
+  private async saveFileRecord(
+    processedFile: ProcessedFile, 
+    metadata: any, 
+    filePath: string
+  ): Promise<FileRecord> {
+    const query = `
+      INSERT INTO files (
+        company_id, entity_type, entity_id, file_name, original_name,
+        file_path, file_size, mime_type, file_hash, storage_backend,
+        storage_path, metadata, uploaded_by
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `;
+    
+    const fileHash = this.generateFileHash(processedFile.original);
+    const fileRecord = {
+      company_id: metadata.companyId,
+      entity_type: metadata.entityType,
+      entity_id: metadata.entityId,
+      file_name: metadata.fileName,
+      original_name: metadata.originalName,
+      file_path: filePath,
+      file_size: processedFile.original.length,
+      mime_type: metadata.mimeType,
+      file_hash: fileHash,
+      storage_backend: 'local', // or 's3', 'hybrid'
+      storage_path: filePath,
+      metadata: JSON.stringify(processedFile.metadata),
+      uploaded_by: metadata.userId
+    };
+    
+    const [result] = await db.execute(query, Object.values(fileRecord));
+    return { ...fileRecord, id: result.insertId };
+  }
+}
+```
+
+## File Processing Pipeline
+
+### Image Processing
+
+```typescript
+// Image processing service
+class ImageProcessor {
+  async processImage(
+    buffer: Buffer,
+    options: ImageOptions
+  ): Promise<ProcessedImage> {
+    const sharp = require("sharp");
+
+    // Generate multiple sizes
+    const sizes = [
+      { name: "thumbnail", width: 200, height: 200 },
+      { name: "small", width: 400, height: 400 },
+      { name: "medium", width: 800, height: 800 },
+      { name: "large", width: 1200, height: 1200 },
+    ];
+
+    const processed = {};
+
+    for (const size of sizes) {
+      processed[size.name] = await sharp(buffer)
+        .resize(size.width, size.height, {
+          fit: "inside",
+          withoutEnlargement: true,
+        })
+        .jpeg({ quality: 85 })
+        .toBuffer();
+    }
+
+    // Extract metadata
+    const metadata = await sharp(buffer).metadata();
+
+    return {
+      sizes: processed,
+      metadata: {
+        width: metadata.width,
+        height: metadata.height,
+        format: metadata.format,
+        size: buffer.length,
+      },
+    };
+  }
+
+  async generateThumbnail(buffer: Buffer): Promise<Buffer> {
+    return await sharp(buffer)
+      .resize(200, 200, { fit: "cover" })
+      .jpeg({ quality: 80 })
+      .toBuffer();
+  }
+}
+```
+
+### Document Processing
+
+```typescript
+// Document processing service
+class DocumentProcessor {
+  async extractText(buffer: Buffer, mimeType: string): Promise<string> {
+    switch (mimeType) {
+      case "application/pdf":
+        return await this.extractFromPDF(buffer);
+      case "application/msword":
+        return await this.extractFromWord(buffer);
+      default:
+        return "";
+    }
+  }
+
+  async extractFromPDF(buffer: Buffer): Promise<string> {
+    // PDF text extraction implementation
+    const pdf = require("pdf-parse");
+    const data = await pdf(buffer);
+    return data.text;
+  }
+
+  async extractFromWord(buffer: Buffer): Promise<string> {
+    // Word document text extraction implementation
+    const mammoth = require("mammoth");
+    const result = await mammoth.extractRawText({ buffer });
+    return result.value;
+  }
+}
+```
+
+## Security & Access Control
+
+### File Access Permissions
+
+```typescript
+// File access control service
+class FileAccessControl {
+  async checkFileAccess(
+    userId: string,
+    fileId: string,
+    action: "read" | "write" | "delete"
+  ): Promise<boolean> {
+    const file = await this.getFile(fileId);
+    const user = await this.getUser(userId);
+
+    // Check company isolation
+    if (file.company_id !== user.company_id) {
+      return false;
+    }
+
+    // Check role-based permissions
+    const permissions = this.getRolePermissions(user.role);
+
+    switch (action) {
+      case "read":
+        return permissions.canViewFiles;
+      case "write":
+        return permissions.canUploadFiles;
+      case "delete":
+        return permissions.canDeleteFiles;
+      default:
+        return false;
+    }
+  }
+
+  private getRolePermissions(role: string) {
+    const permissions = {
+      maintenance_technician: {
+        canViewFiles: true,
+        canUploadFiles: true,
+        canDeleteFiles: false,
+      },
+      asset_manager: {
+        canViewFiles: true,
+        canUploadFiles: true,
+        canDeleteFiles: true,
+      },
+      company_admin: {
+        canViewFiles: true,
+        canUploadFiles: true,
+        canDeleteFiles: true,
+      },
+    };
+
+    return (
+      permissions[role] || {
+        canViewFiles: false,
+        canUploadFiles: false,
+        canDeleteFiles: false,
+      }
+    );
+  }
+}
+```
+
+### File Validation & Sanitization
+
+```typescript
+// File validation service
+class FileValidator {
+  async validateFile(file: File): Promise<ValidationResult> {
+    const results = await Promise.all([
+      this.validateFileSize(file),
+      this.validateFileType(file),
+      this.scanForMalware(file),
+      this.validateFileContent(file),
+    ]);
+
+    return {
+      isValid: results.every((result) => result.isValid),
+      errors: results.flatMap((result) => result.errors),
+      warnings: results.flatMap((result) => result.warnings),
+    };
+  }
+
+  private async validateFileSize(file: File): Promise<ValidationResult> {
+    const maxSize = this.getMaxSizeForType(file.type);
+
+    if (file.size > maxSize) {
+      return {
+        isValid: false,
+        errors: [`File size ${file.size} exceeds maximum ${maxSize}`],
+      };
+    }
+
+    return { isValid: true, errors: [], warnings: [] };
+  }
+
+  private async scanForMalware(file: File): Promise<ValidationResult> {
+    // Implement malware scanning
+    // This would integrate with a security service
+    return { isValid: true, errors: [], warnings: [] };
+  }
+
+  private getMaxSizeForType(mimeType: string): number {
+    const sizeLimits = {
+      "image/jpeg": 10 * 1024 * 1024,
+      "image/png": 10 * 1024 * 1024,
+      "application/pdf": 25 * 1024 * 1024,
+      "video/mp4": 100 * 1024 * 1024,
+    };
+
+    return sizeLimits[mimeType] || 5 * 1024 * 1024; // Default 5MB
+  }
+}
+```
+
+## Performance Optimization
+
+### File Caching Strategy
+
+```typescript
+// File caching service
+class FileCacheService {
+  private cache = new Map<string, CachedFile>();
+
+  async getFile(fileId: string, size?: string): Promise<Buffer | null> {
+    const cacheKey = `${fileId}_${size || "original"}`;
+
+    // Check cache first
+    const cached = this.cache.get(cacheKey);
+    if (cached && !this.isExpired(cached)) {
+      return cached.data;
+    }
+
+    // Load from storage
+    const file = await this.loadFromStorage(fileId, size);
+    if (file) {
+      this.cache.set(cacheKey, {
+        data: file,
+        timestamp: Date.now(),
+        ttl: 3600000, // 1 hour
+      });
+    }
+
+    return file;
+  }
+
+  private isExpired(cached: CachedFile): boolean {
+    return Date.now() - cached.timestamp > cached.ttl;
+  }
+
+  async preloadFiles(fileIds: string[]): Promise<void> {
+    // Preload frequently accessed files
+    const promises = fileIds.map((id) => this.getFile(id));
+    await Promise.all(promises);
+  }
+}
+```
+
+### CDN Integration
+
+```typescript
+// CDN service for file delivery
+class CDNService {
+  async uploadToCDN(file: Buffer, path: string): Promise<string> {
+    // Upload to CDN (CloudFront, CloudFlare, etc.)
+    const cdnUrl = await this.uploadFile(file, path);
+
+    // Invalidate cache if needed
+    await this.invalidateCache(path);
+
+    return cdnUrl;
+  }
+
+  async generateSignedUrl(
+    filePath: string,
+    expiresIn: number = 3600
+  ): Promise<string> {
+    // Generate signed URL for secure file access
+    return await this.createSignedUrl(filePath, expiresIn);
+  }
+}
+```
+
+## Error Handling & Monitoring
+
+### File Upload Error Handling
+
+```typescript
+// Error handling for file operations
+class FileErrorHandler {
+  handleUploadError(error: Error, context: UploadContext): ErrorResponse {
+    if (error instanceof FileSizeError) {
+      return {
+        code: "FILE_TOO_LARGE",
+        message: "File size exceeds maximum allowed limit",
+        details: { maxSize: context.maxSize, actualSize: error.size },
+      };
+    }
+
+    if (error instanceof FileTypeError) {
+      return {
+        code: "INVALID_FILE_TYPE",
+        message: "File type not supported",
+        details: { allowedTypes: context.allowedTypes, actualType: error.type },
+      };
+    }
+
+    if (error instanceof StorageError) {
+      return {
+        code: "STORAGE_ERROR",
+        message: "Failed to store file",
+        details: { storageBackend: context.storageBackend },
+      };
+    }
+
+    return {
+      code: "UNKNOWN_ERROR",
+      message: "An unexpected error occurred during file upload",
+      details: { error: error.message },
+    };
+  }
+}
+```
+
+### File Monitoring & Analytics
+
+```typescript
+// File usage analytics
+class FileAnalytics {
+  async trackFileAccess(
+    fileId: string,
+    userId: string,
+    action: string
+  ): Promise<void> {
+    await this.logAccess({
+      fileId,
+      userId,
+      action,
+      timestamp: new Date(),
+      ipAddress: this.getClientIP(),
+      userAgent: this.getUserAgent(),
+    });
+  }
+
+  async getFileUsageStats(fileId: string, period: string): Promise<FileStats> {
+    const stats = await this.aggregateStats(fileId, period);
+
+    return {
+      totalViews: stats.views,
+      totalDownloads: stats.downloads,
+      uniqueUsers: stats.uniqueUsers,
+      averageAccessTime: stats.avgAccessTime,
+      storageCost: stats.storageCost,
+    };
+  }
+}
+```
+
+## API Endpoints
+
+### File Management Endpoints
+
+```typescript
+// File management API routes
+const fileRoutes = {
+  // Upload file
+  "POST /api/files/upload": {
+    description: "Upload a new file",
+    parameters: {
+      entityType: "asset | component | maintenance",
+      entityId: "UUID",
+      file: "File object",
+      metadata: "JSON object",
+    },
+    response: {
+      fileId: "UUID",
+      url: "string",
+      metadata: "object",
+    },
+  },
+
+  // Get file
+  "GET /api/files/{fileId}": {
+    description: "Retrieve file by ID",
+    parameters: {
+      size: "original | thumbnail | small | medium | large",
+    },
+    response: "File stream or redirect",
+  },
+
+  // List files
+  "GET /api/files": {
+    description: "List files for an entity",
+    parameters: {
+      entityType: "asset | component | maintenance",
+      entityId: "UUID",
+      page: "number",
+      limit: "number",
+    },
+    response: {
+      files: "array",
+      pagination: "object",
+    },
+  },
+
+  // Delete file
+  "DELETE /api/files/{fileId}": {
+    description: "Delete a file",
+    response: {
+      success: "boolean",
+      message: "string",
+    },
+  },
+};
+```
+
+This comprehensive file management specification provides clear guidelines for implementing a robust file handling system in AssetCore, covering everything from upload validation to storage optimization and security measures.

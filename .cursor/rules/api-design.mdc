@@ -1,0 +1,231 @@
+---
+title: API Design Standards
+description: RESTful API design patterns and standards for AssetCore platform
+alwaysApply: true
+---
+
+# API Design Standards
+
+## Overview
+
+AssetCore follows RESTful API design principles to provide a consistent, scalable, and maintainable interface for client applications. The API is designed with multi-tenancy in mind, ensuring proper data isolation and security across different organizations.
+
+## Core API Standards
+
+### Base Configuration
+
+- **Base URL**: `https://api.assetcore.com/v1`
+- **Protocol**: HTTPS only for all communications
+- **API Versioning**: URL-based versioning (`/v1`, `/v2`, etc.)
+- **Content Type**: `application/json` for all requests and responses
+- **Character Encoding**: UTF-8 for all text content
+
+### Authentication & Authorization
+
+- **Authentication Method**: Bearer token in Authorization header
+- **Header Format**: `Authorization: Bearer <jwt_token>`
+- **Token Validation**: All protected endpoints validate JWT tokens
+- **Permission Model**: Role-based access control (RBAC)
+- **Multi-tenancy**: Company-scoped data access enforcement
+
+### Request/Response Standards
+
+#### Request Headers
+```
+Authorization: Bearer <jwt_token>
+Content-Type: application/json
+Accept: application/json
+X-Request-ID: <unique_request_id>  # Optional for tracking
+```
+
+#### Response Headers
+```
+Content-Type: application/json
+X-Request-ID: <unique_request_id>
+X-Rate-Limit-Remaining: <number>
+X-Rate-Limit-Reset: <timestamp>
+```
+
+### Error Handling
+
+#### Standard Error Response Format
+```json
+{
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Invalid input data",
+    "details": {
+      "field": "email",
+      "reason": "Invalid email format"
+    },
+    "request_id": "req_123456789"
+  }
+}
+```
+
+#### HTTP Status Codes
+- **200**: Success
+- **201**: Created
+- **400**: Bad Request (validation errors)
+- **401**: Unauthorized (invalid/missing token)
+- **403**: Forbidden (insufficient permissions)
+- **404**: Not Found
+- **409**: Conflict (duplicate resource)
+- **422**: Unprocessable Entity (business logic errors)
+- **429**: Too Many Requests (rate limit exceeded)
+- **500**: Internal Server Error
+
+### Pagination
+
+#### Cursor-Based Pagination
+```json
+{
+  "data": [...],
+  "pagination": {
+    "cursor": "eyJpZCI6MTIzfQ==",
+    "limit": 50,
+    "has_more": true,
+    "total_count": 1250
+  }
+}
+```
+
+#### Query Parameters
+- `limit`: Number of items per page (default: 50, max: 100)
+- `cursor`: Base64-encoded cursor for pagination
+- `sort`: Field to sort by (e.g., `created_at`, `-name` for descending)
+
+### Rate Limiting
+
+- **Limit**: 1000 requests per hour per user
+- **Headers**: Rate limit information in response headers
+- **Burst Allowance**: Temporary burst capacity for legitimate usage
+- **Differentiated Limits**: Higher limits for authenticated vs anonymous users
+
+## API Endpoint Structure
+
+### Multi-Tenant Resource Organization
+
+All resources are organized under company scope to ensure proper data isolation:
+
+```
+/companies                           # Company management
+├── /companies/{company_id}/users    # User management within company
+├── /companies/{company_id}/assets   # Asset management
+├── /companies/{company_id}/components # Component management
+├── /companies/{company_id}/maintenance # Maintenance records
+├── /companies/{company_id}/locations # Location management
+└── /companies/{company_id}/reports  # Analytics and reporting
+```
+
+### Resource Naming Conventions
+
+- **Plural Nouns**: Use plural forms for resource collections (`/assets`, `/users`)
+- **Hyphenated**: Use hyphens for multi-word resources (`maintenance-records`)
+- **Consistent**: Maintain consistent naming across all endpoints
+- **Descriptive**: Use clear, descriptive names that indicate resource purpose
+
+### HTTP Methods Usage
+
+- **GET**: Retrieve resources (single or collection)
+- **POST**: Create new resources
+- **PUT**: Update entire resources (replace)
+- **PATCH**: Partial updates to resources
+- **DELETE**: Remove resources
+
+### Query Parameters
+
+#### Filtering
+- `filter[field]=value`: Filter by specific field values
+- `filter[field][gte]=value`: Greater than or equal filtering
+- `filter[field][lte]=value`: Less than or equal filtering
+- `filter[field][in]=value1,value2`: Multiple value filtering
+
+#### Searching
+- `search=term`: Full-text search across searchable fields
+- `search[field]=term`: Field-specific search
+
+#### Sorting
+- `sort=field`: Sort ascending by field
+- `sort=-field`: Sort descending by field
+- `sort=field1,field2`: Multiple field sorting
+
+## Security Considerations
+
+### Data Protection
+- **Input Validation**: Comprehensive validation of all input data using Zod schemas
+- **SQL Injection Prevention**: Prepared statements with mysql2 parameterized queries
+- **XSS Protection**: Output encoding and content security policies
+- **CSRF Protection**: CSRF tokens for state-changing operations
+
+### SQL Injection Prevention Strategies
+
+#### Prepared Statements with mysql2
+```javascript
+// ✅ CORRECT: Use parameterized queries
+const query = 'SELECT * FROM assets WHERE company_id = ? AND status = ?';
+const [rows] = await connection.execute(query, [companyId, status]);
+
+// ✅ CORRECT: Multiple parameters
+const query = 'INSERT INTO assets (company_id, name, type) VALUES (?, ?, ?)';
+const [result] = await connection.execute(query, [companyId, name, type]);
+```
+
+#### Input Sanitization
+```javascript
+// ✅ CORRECT: Validate and sanitize input
+const validatedData = assetSchema.parse(requestBody);
+const query = 'UPDATE assets SET name = ?, type = ? WHERE id = ? AND company_id = ?';
+await connection.execute(query, [
+  validatedData.name,
+  validatedData.type,
+  assetId,
+  companyId
+]);
+```
+
+#### Dynamic Query Building
+```javascript
+// ✅ CORRECT: Safe dynamic query building
+const conditions = [];
+const params = [];
+
+if (filters.status) {
+  conditions.push('status = ?');
+  params.push(filters.status);
+}
+
+if (filters.type) {
+  conditions.push('type = ?');
+  params.push(filters.type);
+}
+
+const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+const query = `SELECT * FROM assets ${whereClause} ORDER BY created_at DESC`;
+const [rows] = await connection.execute(query, params);
+```
+
+#### Common Anti-Patterns to Avoid
+```javascript
+// ❌ WRONG: String concatenation (vulnerable to SQL injection)
+const query = `SELECT * FROM assets WHERE name = '${name}'`;
+
+// ❌ WRONG: Template literals with user input
+const query = `SELECT * FROM assets WHERE company_id = ${companyId}`;
+
+// ❌ WRONG: Using query() instead of execute()
+const query = 'SELECT * FROM assets WHERE id = ?';
+const [rows] = await connection.query(query, [id]); // Use execute() instead
+```
+
+### Multi-Tenancy Security
+- **Data Isolation**: Strict company-based data separation
+- **Access Control**: Company-scoped permissions enforcement
+- **Audit Logging**: Comprehensive logging of all API access
+- **Resource Validation**: Verify resource ownership before operations
+
+### Performance & Monitoring
+- **Response Time Monitoring**: Track API response times
+- **Error Rate Tracking**: Monitor and alert on error rates
+- **Usage Analytics**: Track API usage patterns and trends
+- **Health Checks**: Regular endpoint health monitoring

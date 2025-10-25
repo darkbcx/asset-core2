@@ -1,0 +1,515 @@
+---
+title: React & Next.js Conventions
+description: Comprehensive guidelines for React components, Next.js routing, and frontend development patterns in AssetCore
+alwaysApply: true
+---
+
+# React & Next.js Conventions
+
+## Overview
+
+AssetCore follows comprehensive React and Next.js conventions to ensure consistent, performant, and maintainable frontend development. These conventions cover component patterns, routing strategies, and Next.js App Router best practices.
+
+### Key Features
+
+- **Component Architecture**: Consistent React component patterns and organization
+- **Next.js App Router**: Modern routing with App Router patterns
+- **Multi-Tenant Routing**: Company-scoped and system-wide route organization
+- **Type Safety**: Full TypeScript integration with React components
+- **Performance**: Optimized patterns for React and Next.js applications
+
+### Technology Stack
+
+- **React 18.x**: Modern React with concurrent features
+- **Next.js 15.x**: App Router with SSR/SSG capabilities
+- **TypeScript 5.x**: Type-safe component development
+- **shadcn/ui**: Accessible component library
+- **TanStack Query**: Server state management
+
+## Next.js Route Structure
+
+### Company-Scoped Routes (Tenant Users)
+
+```
+/dashboard/                     # Route group for authenticated users
+├── page.tsx                      # /dashboard
+├── assets/                       # /dashboard/assets
+│   ├── page.tsx
+│   └── [id]/
+│       └── page.tsx
+├── tickets/                      # /dashboard/tickets
+└── maintenance/                  # /dashboard/maintenance
+```
+
+### System-Wide Routes (System Administrators)
+
+```
+/admin/                           # ⭐ System Administrators pages (no route group)
+├── page.tsx                      # /admin (admin dashboard)
+├── companies/                    # /admin/companies
+│   ├── page.tsx
+│   └── [id]/
+│       ├── page.tsx
+│       ├── assets/
+│       └── users/
+├── users/                        # /admin/users
+└── settings/                     # /admin/settings
+```
+
+**Key Differences:**
+- **Company-scoped**: Uses `dashboard` route group, requires company context
+- **System-wide**: Uses `admin` directory (no route group), System Administrators only, no company context
+
+## Next.js API Route Structure
+
+### Company-Scoped API Routes
+
+```
+/api/
+├── assets/                       # Company-scoped
+├── tickets/                      # Company-scoped
+└── maintenance/                  # Company-scoped
+```
+
+### System-Wide API Routes (System Administrators Only)
+
+```
+/api/admin/                       # ⭐ System Administrators API routes
+├── companies/
+│   ├── route.ts                  # GET, POST /api/admin/companies
+│   └── [id]/
+│       ├── route.ts              # GET, PUT, DELETE /api/admin/companies/:id
+│       ├── assets/
+│       │   └── route.ts          # GET /api/admin/companies/:id/assets
+│       └── users/
+│           └── route.ts          # GET /api/admin/companies/:id/users
+├── users/
+│   ├── route.ts                  # GET, POST /api/admin/users
+│   └── [id]/
+│       └── route.ts              # GET, PUT, DELETE /api/admin/users/:id
+└── settings/
+    └── route.ts                  # GET, PUT /api/admin/settings
+```
+
+## Component Library Usage
+
+AssetCore uses shadcn/ui as the primary component library for consistent UI components.
+
+```typescript
+// ✅ CORRECT: Import from @/components/ui
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+```
+
+## Data Fetching Patterns
+
+AssetCore uses TanStack Query for efficient data fetching and state management.
+
+```typescript
+// ✅ CORRECT: Use useQuery hook
+const { data, error, isLoading } = useQuery({
+  queryKey: ['assets'],
+  queryFn: fetchAssets,
+});
+```
+
+## React Component Patterns
+
+### Component Naming Conventions
+
+```typescript
+// ✅ CORRECT: PascalCase, descriptive
+
+// Feature components
+const AssetList = () => { };
+const AssetCard = () => { };
+const AssetForm = () => { };
+const AssetStatusBadge = () => { };
+
+// Admin components (System Administrators only)
+const CompanyList = () => { };            // ⭐ Admin component
+const CompanyForm = () => { };            // ⭐ Admin component
+const UserList = () => { };               // ⭐ Admin component
+const SystemSettings = () => { };         // ⭐ Admin component
+
+// UI components
+const Button = () => { };
+const Input = () => { };
+const Dialog = () => { };
+const Table = () => { };
+
+// Layout components
+const DashboardLayout = () => { };
+const AdminLayout = () => { };            // ⭐ Admin layout
+const Header = () => { };
+const Sidebar = () => { };
+
+// Page components
+export default function AssetsPage() { }
+export default function AssetDetailPage() { }
+export default function AdminCompaniesPage() { }  // ⭐ Admin page
+
+// ❌ WRONG: Inconsistent or unclear
+const assetList = () => { };              // Should be PascalCase
+const Asset_Card = () => { };             // No underscores
+const Card = () => { };                   // Too generic (use AssetCard)
+const AC = () => { };                     // Abbreviations unclear
+const SysAdminLayout = () => { };         // ❌ Use AdminLayout not SysAdminLayout
+```
+
+### Component File Organization
+
+```typescript
+// ✅ CORRECT: Consistent naming patterns
+
+// React Components: PascalCase
+components/AssetCard.tsx
+components/ui/Button.tsx
+components/forms/AssetForm.tsx
+components/features/admin/CompanyList.tsx      // ⭐ Admin components
+
+// Pages (Next.js): lowercase with hyphens or folders
+app/(dashboard)/assets/page.tsx                 // Company-scoped pages
+app/admin/companies/page.tsx                    // ⭐ System Administrators pages
+app/admin/companies/[id]/page.tsx
+app/select-company/page.tsx
+
+// API Routes: route.ts in folders
+app/api/assets/route.ts                         // Company-scoped API
+app/api/admin/companies/route.ts                // ⭐ System Administrators API
+app/api/admin/companies/[id]/route.ts
+
+// Utilities: camelCase
+lib/utils/formatDate.ts
+lib/utils/validation.ts
+
+// Repositories: kebab-case with suffix
+lib/db/repositories/asset-repository.ts
+lib/db/repositories/ticket-repository.ts
+
+// Types: PascalCase or index.ts
+lib/db/types/index.ts
+lib/types/Asset.ts
+
+// Hooks: camelCase with 'use' prefix
+lib/hooks/useCompanyContext.ts
+lib/hooks/useAssets.ts
+
+// Tests: same name as file + .test.ts
+lib/utils/formatDate.test.ts
+components/AssetCard.test.tsx
+
+// ❌ WRONG: Inconsistent naming
+components/asset_card.tsx           // Don't use snake_case
+app/api/Assets/Route.ts             // Don't capitalize route.ts
+lib/utils/format-date.ts            // Use camelCase for utils
+lib/hooks/CompanyContext.ts         // Must start with 'use'
+app/System Administrators/companies/page.tsx     // ❌ Use 'admin' not 'System Administrators'
+app/system/users/page.tsx           // ❌ Use 'admin' not 'system'
+```
+
+## React Component Best Practices
+
+### Component Structure
+
+```typescript
+// ✅ CORRECT: Well-structured React component
+
+'use client';
+
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import type { Asset } from '@/lib/types';
+
+interface AssetCardProps {
+  asset: Asset;
+  onEdit?: (asset: Asset) => void;
+  onDelete?: (id: string) => void;
+}
+
+export function AssetCard({ asset, onEdit, onDelete }: AssetCardProps) {
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleEdit = () => {
+    onEdit?.(asset);
+  };
+
+  const handleDelete = async () => {
+    setIsLoading(true);
+    try {
+      await onDelete?.(asset.id);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{asset.assetCode}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-2">
+          <p className="text-sm text-muted-foreground">Type: {asset.type}</p>
+          <p className="text-sm text-muted-foreground">Status: {asset.status}</p>
+        </div>
+      </CardContent>
+      <div className="flex gap-2 p-4">
+        <Button variant="outline" onClick={handleEdit}>
+          Edit
+        </Button>
+        <Button 
+          variant="destructive" 
+          onClick={handleDelete}
+          disabled={isLoading}
+        >
+          {isLoading ? 'Deleting...' : 'Delete'}
+        </Button>
+      </div>
+    </Card>
+  );
+}
+```
+
+### Custom Hooks Pattern
+
+```typescript
+// ✅ CORRECT: Custom hook for data fetching
+
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { apiClient } from '@/lib/apiClient';
+
+export function useAssets(companyId: string) {
+  return useQuery({
+    queryKey: ['assets', companyId],
+    queryFn: () => apiClient.getAssets(companyId),
+    enabled: !!companyId,
+  });
+}
+
+export function useCreateAsset() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: apiClient.createAsset,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['assets'] });
+    },
+  });
+}
+
+export function useDeleteAsset() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: apiClient.deleteAsset,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['assets'] });
+    },
+  });
+}
+```
+
+### Page Component Pattern
+
+```typescript
+// ✅ CORRECT: Next.js page component
+
+import { Suspense } from 'react';
+import { AssetList } from '@/components/AssetList';
+import { AssetForm } from '@/components/forms/AssetForm';
+import { Button } from '@/components/ui/button';
+import { Plus } from 'lucide-react';
+
+export default function AssetsPage() {
+  return (
+    <div className="container mx-auto py-6">
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-3xl font-bold">Assets</h1>
+        <Button>
+          <Plus className="h-4 w-4 mr-2" />
+          Add Asset
+        </Button>
+      </div>
+      
+      <Suspense fallback={<div>Loading assets...</div>}>
+        <AssetList />
+      </Suspense>
+    </div>
+  );
+}
+```
+
+## Next.js App Router Patterns
+
+### Layout Components
+
+```typescript
+// ✅ CORRECT: Dashboard layout for company-scoped pages
+
+import { Sidebar } from '@/components/layout/Sidebar';
+import { Header } from '@/components/layout/Header';
+import { CompanyProvider } from '@/lib/contexts/CompanyContext';
+
+export default function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <CompanyProvider>
+      <div className="flex h-screen">
+        <Sidebar />
+        <div className="flex-1 flex flex-col">
+          <Header />
+          <main className="flex-1 overflow-auto">
+            {children}
+          </main>
+        </div>
+      </div>
+    </CompanyProvider>
+  );
+}
+```
+
+```typescript
+// ✅ CORRECT: Admin layout for system-wide pages
+
+import { AdminSidebar } from '@/components/layout/AdminSidebar';
+import { AdminHeader } from '@/components/layout/AdminHeader';
+import { requireSystemAdmin } from '@/lib/auth';
+
+export default async function AdminLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  await requireSystemAdmin();
+  
+  return (
+    <div className="flex h-screen">
+      <AdminSidebar />
+      <div className="flex-1 flex flex-col">
+        <AdminHeader />
+        <main className="flex-1 overflow-auto">
+          {children}
+        </main>
+      </div>
+    </div>
+  );
+}
+```
+
+### API Route Handlers
+
+```typescript
+// ✅ CORRECT: Company-scoped API route
+
+import { NextRequest, NextResponse } from 'next/server';
+import { requireAuth } from '@/lib/auth';
+import { assetInsertSchema } from '@/lib/validation/schemas';
+import { createAsset } from '@/backend/assets';
+
+export async function POST(request: NextRequest) {
+  try {
+    const user = await requireAuth(request);
+    const body = await request.json();
+    
+    // Validate input
+    const validatedData = assetInsertSchema.parse(body);
+    
+    // Create asset with company context
+    const asset = await createAsset({
+      companyId: user.companyId,
+      ...validatedData,
+    });
+    
+    return NextResponse.json(asset, { status: 201 });
+  } catch (error) {
+    return NextResponse.json(
+      { error: 'Failed to create asset' },
+      { status: 400 }
+    );
+  }
+}
+```
+
+```typescript
+// ✅ CORRECT: System-wide API route
+
+import { NextRequest, NextResponse } from 'next/server';
+import { requireSystemAdmin } from '@/lib/auth';
+import { companyInsertSchema } from '@/lib/validation/schemas';
+import { createCompany } from '@/backend/companies';
+
+export async function POST(request: NextRequest) {
+  try {
+    await requireSystemAdmin(request);
+    const body = await request.json();
+    
+    // Validate input
+    const validatedData = companyInsertSchema.parse(body);
+    
+    // Create company (system-wide operation)
+    const company = await createCompany(validatedData);
+    
+    return NextResponse.json(company, { status: 201 });
+  } catch (error) {
+    return NextResponse.json(
+      { error: 'Failed to create company' },
+      { status: 400 }
+    );
+  }
+}
+```
+
+## Implementation Guidelines
+
+### Directory Structure Standards
+
+AssetCore follows specific directory naming conventions to maintain consistency and clarity:
+
+- **Company-scoped pages**: `src/app/(dashboard)/`
+- **System Administrators pages**: `src/app/admin/` ⭐
+- **System Administrators NextJS API**: `src/app/api/admin/` ⭐
+- **System Administrators components**: `src/components/features/admin/` ⭐
+
+### Access Control Patterns
+
+- **Dashboard routes**: Require authentication + company context
+- **Admin routes**: Require authentication + System Administrators role (no company context needed)
+
+### Component Organization
+
+- **Feature components**: `src/components/features/`
+- **UI components**: `src/components/ui/` (shadcn/ui)
+- **Layout components**: `src/components/layout/`
+- **Form components**: `src/components/forms/`
+- **Admin components**: `src/components/features/admin/`
+
+### Performance Optimization
+
+- **Server Components**: Use by default for better performance
+- **Client Components**: Only when interactivity is needed (`'use client'`)
+- **Suspense Boundaries**: Wrap async components appropriately
+- **Dynamic Imports**: Use for code splitting when beneficial
+
+## Summary
+
+### Key Rules
+
+1. **✅ System Administrators pages**: MUST be in `src/app/admin/` directory
+2. **✅ System Administrators NextJS API routes**: MUST be in `src/app/api/admin/` directory
+3. **✅ System Administrators components**: SHOULD be in `src/components/features/admin/`
+4. **✅ Admin layout**: MUST check for System Administrators role in `src/app/admin/layout.tsx`
+5. **✅ No company context**: Admin pages operate system-wide
+6. **✅ Consistent naming**: Use `admin` not `System Administrators` or `system` for directories
+
+### Benefits
+
+- **Consistency**: Uniform React and Next.js patterns across all components
+- **Type Safety**: Full TypeScript integration with React components
+- **Performance**: Optimized patterns for React and Next.js applications
+- **Maintainability**: Clear component organization and naming conventions
+- **Scalability**: Proper separation between company-scoped and system-wide functionality

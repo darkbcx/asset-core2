@@ -1,0 +1,499 @@
+---
+title: shadcn/ui Component Library Standards
+description: Comprehensive guide for implementing and using shadcn/ui components in AssetCore's TypeScript React application
+alwaysApply: true
+---
+
+# shadcn/ui Component Library Standards
+
+## Overview
+
+AssetCore uses shadcn/ui as the primary component library for building consistent, accessible, and maintainable user interfaces. This guide establishes standards for component setup, usage patterns, and best practices to ensure a cohesive design system across the entire application.
+
+### Key Benefits
+
+- **Consistent Design**: Unified component library ensures visual consistency
+- **Accessibility**: Built-in accessibility features and WCAG compliance
+- **TypeScript Support**: Full type safety and IntelliSense support
+- **Customizable**: Easy theming and component customization
+- **Performance**: Optimized components with minimal bundle impact
+
+## Installation & Setup
+
+### Initial Setup
+
+```bash
+# Initialize shadcn/ui
+npx shadcn-ui@latest init
+
+# When prompted, choose:
+# - TypeScript: Yes
+# - Style: Default
+# - Base color: Slate (or your preference)
+# - Global CSS: app/globals.css
+# - CSS variables: Yes
+# - Tailwind config: tailwind.config.ts
+# - Components: @/components
+# - Utils: @/lib/utils
+# - React Server Components: Yes
+```
+
+### Configuration Files
+
+```typescript
+// components.json
+{
+  "$schema": "https://ui.shadcn.com/schema.json",
+  "style": "default",
+  "rsc": true,
+  "tsx": true,
+  "tailwind": {
+    "config": "tailwind.config.ts",
+    "css": "app/globals.css",
+    "baseColor": "slate",
+    "cssVariables": true
+  },
+  "aliases": {
+    "components": "@/components",
+    "utils": "@/lib/utils"
+  }
+}
+```
+
+```typescript
+// lib/utils/cn.ts (created by shadcn/ui init)
+import { type ClassValue, clsx } from "clsx"
+import { twMerge } from "tailwind-merge"
+ 
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs))
+}
+```
+
+### Adding Components
+
+AssetCore uses the following core shadcn/ui components for building the user interface:
+
+```bash
+# Core components for AssetCore
+npx shadcn-ui@latest add button input card dialog table form select badge dropdown-menu toast
+
+# Additional components as needed
+npx shadcn-ui@latest add alert-dialog sheet tabs accordion calendar date-picker
+```
+
+**Required Components for AssetCore:**
+
+- **Button**: Primary actions, form submissions, navigation
+- **Input**: Form fields, search inputs, data entry
+- **Card**: Asset cards, component displays, dashboard widgets
+- **Dialog**: Confirmations, modals, detailed views
+- **Table**: Asset listings, maintenance records, data tables
+- **Form**: Asset creation, maintenance reporting, user management
+- **Select**: Dropdowns, asset type selection, status filters
+- **Badge**: Status indicators, priority levels, categories
+- **Dropdown Menu**: Action menus, user settings, bulk operations
+- **Toast**: Success/error notifications, user feedback
+
+## Component Usage Patterns
+
+### Asset Management Components
+
+AssetCore implements specific component patterns for asset management workflows:
+
+```typescript
+// ✅ CORRECT: Asset card component using shadcn/ui
+
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+
+export function AssetCard({ asset }: { asset: Asset }) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{asset.assetCode}</CardTitle>
+        <CardDescription>Type: {asset.type}</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-muted-foreground">Status:</span>
+            <Badge variant={asset.status === 'operational' ? 'default' : 'secondary'}>
+              {asset.status}
+            </Badge>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-muted-foreground">Model:</span>
+            <span className="text-sm font-medium">{asset.model || 'N/A'}</span>
+          </div>
+        </div>
+      </CardContent>
+      <CardFooter className="flex gap-2">
+        <Button variant="outline" size="sm">
+          Edit
+        </Button>
+        <Button variant="destructive" size="sm">
+          Delete
+        </Button>
+      </CardFooter>
+    </Card>
+  );
+}
+```
+
+### Data Tables
+
+AssetCore uses shadcn/ui Table components for displaying asset lists, maintenance records, and other tabular data:
+
+```typescript
+// ✅ CORRECT: Asset table with status indicators and actions
+
+'use client';
+
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import type { Asset } from '@/lib/db/types';
+
+interface AssetsTableProps {
+  assets: Asset[];
+  onEdit: (asset: Asset) => void;
+  onDelete: (id: string) => void;
+}
+
+export function AssetsTable({ assets, onEdit, onDelete }: AssetsTableProps) {
+  return (
+    <div className="rounded-md border">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Asset Code</TableHead>
+            <TableHead>Type</TableHead>
+            <TableHead>Model</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead className="text-right">Actions</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {assets.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={5} className="h-24 text-center">
+                No assets found.
+              </TableCell>
+            </TableRow>
+          ) : (
+            assets.map((asset) => (
+              <TableRow key={asset.id}>
+                <TableCell className="font-medium">{asset.assetCode}</TableCell>
+                <TableCell>{asset.type}</TableCell>
+                <TableCell>{asset.model || '—'}</TableCell>
+                <TableCell>
+                  <Badge
+                    variant={
+                      asset.status === 'operational'
+                        ? 'default'
+                        : asset.status === 'maintenance'
+                        ? 'secondary'
+                        : 'outline'
+                    }
+                  >
+                    {asset.status}
+                  </Badge>
+                </TableCell>
+                <TableCell className="text-right space-x-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onEdit(asset)}
+                  >
+                    Edit
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onDelete(asset.id)}
+                  >
+                    Delete
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ))
+          )}
+        </TableBody>
+      </Table>
+    </div>
+  );
+}
+```
+
+### Dialog & Modal Patterns
+
+AssetCore uses Dialog components for confirmations, detailed views, and form modals:
+
+```typescript
+// ✅ CORRECT: Confirmation dialog for asset deletion
+
+'use client';
+
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { useState } from 'react';
+
+interface DeleteAssetDialogProps {
+  assetCode: string;
+  onConfirm: () => Promise<void>;
+}
+
+export function DeleteAssetDialog({ assetCode, onConfirm }: DeleteAssetDialogProps) {
+  const [open, setOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleConfirm = async () => {
+    setIsDeleting(true);
+    try {
+      await onConfirm();
+      setOpen(false);
+    } catch (error) {
+      console.error('Failed to delete:', error);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="destructive" size="sm">
+          Delete
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Are you sure?</DialogTitle>
+          <DialogDescription>
+            This will permanently delete the asset <strong>{assetCode}</strong>.
+            This action cannot be undone.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setOpen(false)}>
+            Cancel
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={handleConfirm}
+            disabled={isDeleting}
+          >
+            {isDeleting ? 'Deleting...' : 'Delete'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+```
+
+### Toast Notifications
+
+AssetCore uses Toast notifications for user feedback, success messages, and error handling:
+
+```typescript
+// ✅ CORRECT: Toast notifications for asset operations
+
+'use client';
+
+import { useToast } from '@/components/ui/use-toast';
+import { Button } from '@/components/ui/button';
+
+export function AssetActions() {
+  const { toast } = useToast();
+
+  const handleCreate = async () => {
+    try {
+      // Create asset logic
+      toast({
+        title: 'Success',
+        description: 'Asset created successfully',
+      });
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to create asset',
+      });
+    }
+  };
+
+  return <Button onClick={handleCreate}>Create Asset</Button>;
+}
+
+// Don't forget to add Toaster to layout
+// app/layout.tsx
+import { Toaster } from '@/components/ui/toaster';
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="en">
+      <body>
+        {children}
+        <Toaster />
+      </body>
+    </html>
+  );
+}
+```
+
+## Component Customization
+
+### Customizing shadcn/ui Components
+
+AssetCore follows specific patterns for customizing shadcn/ui components while maintaining consistency:
+
+```typescript
+// ✅ CORRECT: Customize via className with cn() utility
+
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+
+export function CustomButton({ className, ...props }: React.ComponentProps<typeof Button>) {
+  return (
+    <Button
+      className={cn('custom-styles', className)}
+      {...props}
+    />
+  );
+}
+
+// ✅ CORRECT: Extend variant types
+import { buttonVariants } from '@/components/ui/button';
+
+<Link
+  href="/assets"
+  className={cn(buttonVariants({ variant: 'outline', size: 'sm' }))}
+>
+  View Assets
+</Link>
+```
+
+### Status Badge Patterns
+
+AssetCore uses consistent Badge variants for different asset and component statuses:
+
+```typescript
+// Asset status badges
+const getAssetStatusBadge = (status: string) => {
+  switch (status) {
+    case 'operational':
+      return <Badge variant="default">Operational</Badge>;
+    case 'maintenance':
+      return <Badge variant="secondary">Maintenance</Badge>;
+    case 'inactive':
+      return <Badge variant="outline">Inactive</Badge>;
+    case 'retired':
+      return <Badge variant="destructive">Retired</Badge>;
+    default:
+      return <Badge variant="outline">{status}</Badge>;
+  }
+};
+
+// Component status badges
+const getComponentStatusBadge = (status: string) => {
+  switch (status) {
+    case 'installed':
+      return <Badge variant="default">Installed</Badge>;
+    case 'repairing':
+      return <Badge variant="secondary">Repairing</Badge>;
+    case 'removed':
+      return <Badge variant="outline">Removed</Badge>;
+    case 'in-stock':
+      return <Badge variant="secondary">In Stock</Badge>;
+    default:
+      return <Badge variant="outline">{status}</Badge>;
+  }
+};
+```
+
+## Best Practices & Standards
+
+### Component Usage Guidelines
+
+AssetCore follows these standards for consistent shadcn/ui component usage:
+
+```typescript
+// ✅ DO: Use shadcn/ui components consistently
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+
+// ✅ DO: Leverage cn() for conditional styling
+import { cn } from '@/lib/utils';
+
+<div className={cn(
+  'base-classes',
+  condition && 'conditional-class',
+  className
+)} />
+
+// ✅ DO: Keep shadcn/ui components in /components/ui/
+// Don't modify them directly - wrap if you need customization
+
+// ✅ DO: Use Badge for status indicators
+<Badge variant={status === 'active' ? 'default' : 'secondary'}>
+  {status}
+</Badge>
+
+// ❌ DON'T: Mix other UI libraries with shadcn/ui
+// Pick one and stick with it for consistency
+
+// ❌ DON'T: Modify shadcn/ui component files directly
+// Instead, create wrapper components or use className prop
+```
+
+### AssetCore-Specific Patterns
+
+**Button Variants Usage:**
+
+- **Primary Actions**: `variant="default"` for main actions (Create Asset, Save Changes)
+- **Secondary Actions**: `variant="outline"` for secondary actions (Edit, View Details)
+- **Destructive Actions**: `variant="destructive"` for delete operations
+- **Ghost Actions**: `variant="ghost"` for table row actions
+
+**Form Patterns:**
+
+- Use `Form` components with React Hook Form integration
+- Implement proper validation with Zod schemas
+- Use `Input` with appropriate types (text, email, password, number)
+- Use `Select` for dropdown selections (asset types, statuses, locations)
+
+**Table Patterns:**
+
+- Use `Table` for all data listings (assets, components, maintenance records)
+- Implement proper loading states and empty states
+- Use `Badge` components for status columns
+- Include action buttons in the rightmost column
+
+### Accessibility Standards
+
+AssetCore ensures all components meet accessibility requirements:
+
+- **Keyboard Navigation**: All interactive elements are keyboard accessible
+- **Screen Reader Support**: Proper ARIA labels and descriptions
+- **Color Contrast**: WCAG AA compliance for all text and UI elements
+- **Focus Management**: Clear focus indicators and logical tab order
+- **Error Handling**: Accessible error messages and validation feedback

@@ -1,0 +1,111 @@
+---
+title: Authentication System
+description: Custom JWT-based authentication with username/password credentials
+alwaysApply: true
+---
+
+# Authentication System
+
+## Overview
+
+AssetCore implements a custom authentication system using username/password credentials with JWT (JSON Web Token) session management. This approach provides stateless authentication while maintaining security through secure password hashing and token-based authorization.
+
+### Key Features
+
+- **Stateless Authentication**: JWT tokens eliminate server-side session storage
+- **Secure Password Hashing**: bcrypt/argon2 for password protection
+- **Token-based Authorization**: Bearer tokens for API authentication
+- **Future-ready Architecture**: Designed for easy migration to OAuth providers
+
+### Security Considerations
+
+- JWT secret must be stored in environment variables
+- Tokens include expiration for security
+- Password hashing uses industry-standard algorithms
+- All API endpoints require valid JWT tokens
+
+## Backend Implementation
+
+### Authentication Flow
+
+#### Login Process
+1. **Credential Validation**
+   - Client sends username and password
+   - Verify username exists in user table
+   - Return error if username not found
+
+2. **Password Verification**
+   - Compare submitted password with stored hash
+   - Use bcrypt/argon2 for secure comparison
+   - Return error if password mismatch
+
+3. **Token Generation**
+   - Generate JWT token mimicking OAuth structure
+   - Include user claims and expiration time
+   - Return success response with token
+
+#### Token Refresh Process
+1. **Token Validation**
+   - Client sends existing JWT token
+   - Validate token signature using stored secret
+   - Return error if token invalid
+
+2. **Expiration Check**
+   - Verify token hasn't expired
+   - Return error if token expired
+
+3. **Token Renewal**
+   - Generate new JWT token
+   - Return success response with refreshed token
+
+#### Token Validation Process (API Middleware)
+1. **Signature Verification**
+   - API endpoints receive JWT token from client Authorization header
+   - Validate token signature using stored secret
+   - Return 401 Unauthorized if validation fails
+
+2. **Token Decoding & Authorization**
+   - If valid, decode JWT payload to extract user information
+   - Verify token expiration and user permissions
+   - Pass user context to protected API endpoints
+   - Return 403 Forbidden if user lacks required permissions
+
+## Frontend Implementation
+
+### Authentication Management
+
+#### Login Flow
+1. **Credential Submission**
+   - Send username and password to backend
+   - Handle authentication errors gracefully
+   - Display appropriate error messages
+
+2. **Token Storage**
+   - Store JWT token in secure HTTP-only cookies
+   - Configure cookie with appropriate security flags
+   - Set expiration based on token lifetime
+
+#### Token Refresh Flow
+1. **Automatic Refresh**
+   - Send stored JWT token to refresh endpoint
+   - Handle refresh errors appropriately
+   - Update stored token on successful refresh
+
+2. **Error Handling**
+   - Redirect to login on refresh failure
+   - Clear invalid tokens from storage
+
+#### Logout Process
+1. **Token Cleanup**
+   - Remove JWT token from cookies
+   - Clear any client-side token storage
+   - Redirect to login page
+
+### Security Best Practices
+
+- Use HTTP-only cookies for token storage
+- Implement automatic token refresh
+- Handle token expiration gracefully
+- Clear tokens on logout
+- Validate tokens on every API request
+

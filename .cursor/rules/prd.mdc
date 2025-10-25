@@ -1,0 +1,1434 @@
+---
+title: AssetCore PRD
+description: Product Requirements Document (PRD) for AssetCore - a comprehensive multi-tenant asset and component management system focused on maintenance tracking, operational status monitoring, and lifecycle management across organizations
+alwaysApply: true
+---
+
+# 🧾 Product Requirements Document (PRD)
+
+**Product Name:** AssetCore  
+**Version:** v1.0  
+**Document Type:** Product Requirements Document  
+**Last Updated:** [Current Date]  
+**Status:** Draft
+
+---
+
+## 1. Executive Summary
+
+### 1.1 Product Vision
+
+AssetCore is a comprehensive, cloud-based asset management platform designed to revolutionize how organizations track, maintain, and optimize their physical assets and components. Built with a multi-tenant architecture, AssetCore provides real-time visibility into asset health, streamlines maintenance workflows, and enables data-driven decision making across entire organizations.
+
+### 1.2 Market Position & Competitive Advantage
+
+**Market Opportunity:**
+The global Enterprise Asset Management (EAM) market is valued at $4.2 billion and growing at 8.2% CAGR. Organizations are increasingly seeking cloud-based solutions that provide real-time visibility and predictive maintenance capabilities.
+
+**Competitive Differentiation:**
+
+- **Component-Level Granularity**: Unlike traditional EAM systems that focus on asset-level tracking, AssetCore provides detailed component-level management
+- **Multi-Tenant SaaS Architecture**: Scalable, cost-effective solution for organizations of all sizes
+- **Real-Time Analytics**: Live dashboard with predictive maintenance insights
+- **Mobile-First Design**: Optimized for field technicians and mobile workforce
+- **Rapid Deployment**: Quick setup and configuration compared to enterprise EAM systems
+
+**Target Market Segments:**
+
+- **Aviation Industry**: Airlines, MRO providers, and aviation maintenance companies
+- **Manufacturing**: Heavy machinery, production equipment, and industrial assets
+- **Transportation**: Fleet management, logistics, and vehicle maintenance
+- **Energy & Utilities**: Power generation, transmission, and distribution assets
+- **Healthcare**: Medical equipment and facility management
+
+### 1.3 Business Problem
+
+Organizations managing physical assets face significant operational challenges:
+
+**Current State Pain Points:**
+
+- **Fragmented Data Management**: Asset information scattered across spreadsheets, paper logs, and disparate systems
+- **Poor Visibility**: No real-time insight into which assets are operational, under maintenance, or require attention
+- **Inefficient Maintenance Processes**: Manual tracking leads to missed maintenance windows, extended downtime, and increased costs
+- **Limited Historical Data**: Difficulty analyzing maintenance patterns, costs, and performance trends
+- **Compliance Challenges**: Inconsistent record-keeping makes regulatory compliance and audits difficult
+- **Resource Misallocation**: Lack of data-driven insights leads to suboptimal resource planning and allocation
+
+**Business Impact:**
+
+- Increased operational costs due to unplanned downtime
+- Reduced asset utilization and productivity
+- Higher maintenance costs from reactive rather than proactive maintenance
+- Compliance risks and potential regulatory penalties
+- Poor decision-making due to lack of comprehensive data
+
+### 1.4 Solution Overview
+
+AssetCore addresses these challenges by providing:
+
+- **Unified Asset Repository**: Centralized database of all assets, components, and maintenance history
+- **Real-Time Status Tracking**: Live visibility into asset operational status and component health
+- **Streamlined Maintenance Workflows**: Digital maintenance requests, work orders, and completion tracking
+- **Comprehensive Analytics**: Data-driven insights for maintenance planning and cost optimization
+- **Multi-Tenant Architecture**: Secure, isolated environments for different organizations
+- **Scalable Platform**: Designed to grow with organizations from small teams to enterprise-scale operations
+
+### 1.5 Success Criteria
+
+**Primary Goals:**
+
+- Reduce unplanned asset downtime by 30%
+- Improve maintenance efficiency by 40%
+- Achieve 95% data accuracy in asset tracking
+- Enable proactive maintenance planning for 80% of assets
+
+**Key Performance Indicators:**
+
+- Mean Time To Repair (MTTR) reduction
+- Asset utilization rate improvement
+- Maintenance cost optimization
+- User adoption and engagement metrics
+
+---
+
+## 2. User Personas & Roles
+
+AssetCore serves two distinct user categories: **Tenant Users** (organization-specific) and **System Administrators** (platform-wide).
+
+### 2.1 Tenant Users (Organization-Specific)
+
+These users belong to specific organizations and interact with their company's asset data only.
+
+#### 2.1.1 Maintenance Technician
+
+**Primary Responsibilities:**
+
+- Execute maintenance tasks and repairs
+- Update component status and maintenance records
+- Document work performed with photos and notes
+- Report issues and maintenance requirements
+
+**Key Needs:**
+
+- Mobile-friendly interface for field work
+- Simple, intuitive forms for logging maintenance activities
+- Photo upload capabilities for documentation
+- Offline capability for remote locations
+- Clear work order assignments and priorities
+
+**Permissions:**
+
+- View assigned assets and components
+- Create and update maintenance records
+- Upload attachments and documentation
+- Update component status (installed, repairing, removed)
+
+#### 2.1.2 Asset Manager
+
+**Primary Responsibilities:**
+
+- Oversee asset portfolio health and performance
+- Plan maintenance schedules and resource allocation
+- Monitor maintenance costs and efficiency metrics
+- Ensure compliance with maintenance standards
+
+**Key Needs:**
+
+- Comprehensive dashboard with asset health overview
+- Maintenance scheduling and planning tools
+- Cost analysis and budget tracking
+- Performance metrics and reporting
+- Alert notifications for critical issues
+
+**Permissions:**
+
+- Full access to company's asset and component data
+- Create and manage maintenance schedules
+- Generate reports and analytics
+- Manage technician assignments
+- Configure maintenance standards and procedures
+
+#### 2.1.3 Operations Supervisor
+
+**Primary Responsibilities:**
+
+- Ensure operational continuity and asset availability
+- Monitor downtime and performance metrics
+- Coordinate between maintenance and operations teams
+- Report to senior management on asset performance
+
+**Key Needs:**
+
+- Real-time asset status monitoring
+- Downtime tracking and analysis
+- Performance dashboards and KPIs
+- Integration with operational systems
+- Executive-level reporting capabilities
+
+**Permissions:**
+
+- Read-only access to all asset and maintenance data
+- Generate operational reports
+- View maintenance schedules and impact
+- Access to analytics and performance metrics
+
+#### 2.1.4 Company Administrator
+
+**Primary Responsibilities:**
+
+- Manage company configuration and user accounts
+- Set up asset hierarchies and maintenance procedures
+- Configure company-specific settings and workflows
+- Oversee data quality and system adoption
+
+**Key Needs:**
+
+- User management and role assignment
+- Company configuration and customization
+- Data import/export capabilities
+- System administration tools
+- Integration with company systems
+
+**Permissions:**
+
+- Full administrative access within company scope
+- User management and role configuration
+- Company settings and configuration
+- Data management and system integration
+
+### 2.2 System Administrators (Platform-Wide)
+
+These users manage the AssetCore platform across all organizations.
+
+#### 2.2.1 Super Administrator
+
+**Primary Responsibilities:**
+
+- Manage platform-wide configuration and settings
+- Oversee all tenant organizations and users
+- Monitor system performance and security
+- Handle platform-level support and maintenance
+
+**Key Needs:**
+
+- Multi-tenant management capabilities
+- System monitoring and performance tools
+- Security and compliance oversight
+- Platform configuration and customization
+- Support and troubleshooting tools
+
+**Permissions:**
+
+- Full access to all organizations and data
+- Platform configuration and system settings
+- User management across all tenants
+- System monitoring and maintenance
+- Security and compliance management
+
+#### 2.2.2 Support Administrator
+
+**Primary Responsibilities:**
+
+- Provide technical support to tenant organizations
+- Assist with data migration and system setup
+- Handle user training and onboarding
+- Resolve technical issues and bugs
+
+**Key Needs:**
+
+- Access to tenant data for troubleshooting
+- User support and training tools
+- Data migration and import capabilities
+- Issue tracking and resolution tools
+
+**Permissions:**
+
+- Read access to all tenant data
+- User support and training capabilities
+- Data migration and import tools
+- Issue tracking and resolution access
+
+### 2.3 Role-Based Access Control (RBAC)
+
+**Security Principles:**
+
+- **Tenant Isolation**: Each organization's data is completely isolated
+- **Principle of Least Privilege**: Users receive minimum required permissions
+- **Role Hierarchy**: Clear permission inheritance and escalation paths
+- **Audit Trail**: All user actions are logged for compliance and security
+
+---
+
+## 3. Core Features & Requirements
+
+### 3.1 Multi-Tenant Company Management
+
+**Feature Description:**
+Comprehensive tenant management system enabling secure isolation and configuration for multiple organizations.
+
+**User Stories:**
+
+- As a Super Administrator, I want to create and manage tenant organizations so that each company has isolated data and configuration
+- As a Company Administrator, I want to configure company-specific settings so that the system aligns with our operational requirements
+- As a Company Administrator, I want to manage user accounts and roles so that access is properly controlled within our organization
+
+**Acceptance Criteria:**
+
+- [ ] System supports unlimited tenant organizations with complete data isolation
+- [ ] Each tenant can configure custom asset types, maintenance procedures, and workflows
+- [ ] User management includes role assignment, permission configuration, and access control
+- [ ] Tenant onboarding process includes data migration tools and configuration wizards
+- [ ] System maintains audit logs for all tenant management activities
+
+**Technical Requirements:**
+
+- Database-level tenant isolation using company_id foreign keys
+- Row-level security policies for data access control
+- Configurable tenant settings stored in separate configuration tables
+- Automated tenant provisioning and deprovisioning capabilities
+
+### 3.2 Asset Management System
+
+**Feature Description:**
+Complete asset lifecycle management including registration, categorization, status tracking, and hierarchical organization.
+
+**User Stories:**
+
+- As an Asset Manager, I want to register new assets with detailed specifications so that we have comprehensive asset records
+- As an Operations Supervisor, I want to view real-time asset status so that I can make informed operational decisions
+- As a Maintenance Technician, I want to quickly locate and identify assets so that I can efficiently perform maintenance tasks
+- As a Company Administrator, I want to categorize assets by type and location so that we can organize our asset portfolio effectively
+
+**Acceptance Criteria:**
+
+- [ ] Asset registration includes: asset code, type, model, serial number, manufacturer, purchase date, warranty information
+- [ ] Asset status tracking supports: operational, inactive, maintenance, retired, disposed
+- [ ] Asset categorization by type (aircraft, vehicles, generators, equipment) with custom categories
+- [ ] Asset location tracking with hierarchical location management (site → building → floor → room)
+- [ ] Asset search and filtering by multiple criteria (type, status, location, date ranges)
+- [ ] Asset history tracking for all status changes and maintenance activities
+- [ ] Bulk asset import/export capabilities for data migration
+
+**Technical Requirements:**
+
+- Asset table with comprehensive metadata fields
+- Asset type configuration system with custom fields
+- Location hierarchy management with parent-child relationships
+- Full-text search capabilities for asset identification
+- Asset status workflow with automated transitions
+
+### 3.3 Component Management System
+
+**Feature Description:**
+Detailed component tracking within assets, including installation, removal, transfer, and maintenance history.
+
+**User Stories:**
+
+- As a Maintenance Technician, I want to track individual components within assets so that I can perform targeted maintenance
+- As an Asset Manager, I want to monitor component health and replacement schedules so that I can plan maintenance proactively
+- As an Operations Supervisor, I want to see which components are causing downtime so that I can prioritize maintenance resources
+- As a Company Administrator, I want to track component costs and suppliers so that I can optimize procurement decisions
+
+**Acceptance Criteria:**
+
+- [ ] Component registration includes: serial number, part number, manufacturer, installation date, position, specifications
+- [ ] Component status tracking: installed, removed, repairing, in-stock, ordered, disposed
+- [ ] Component transfer capabilities between assets with full history tracking
+- [ ] Component maintenance scheduling based on usage hours, calendar time, or condition
+- [ ] Component cost tracking including purchase price, installation cost, maintenance cost
+- [ ] Component supplier and vendor management with contact information
+- [ ] Component warranty tracking with expiration dates and coverage details
+- [ ] Component performance metrics and failure analysis
+
+**Technical Requirements:**
+
+- Component table with asset relationship and metadata
+- Component transfer history table for audit trails
+- Component status workflow with automated notifications
+- Component maintenance scheduling engine
+- Component cost analysis and reporting capabilities
+
+### 3.4 Maintenance Tracking & Workflow Management
+
+**Feature Description:**
+Comprehensive maintenance lifecycle management from issue reporting to completion, including work orders, scheduling, and documentation.
+
+**User Stories:**
+
+- As a Maintenance Technician, I want to report component issues quickly so that maintenance can be scheduled promptly
+- As an Asset Manager, I want to create and assign work orders so that maintenance tasks are properly organized
+- As a Maintenance Technician, I want to document maintenance work with photos and notes so that we have complete records
+- As an Operations Supervisor, I want to track maintenance progress so that I can plan operational schedules
+- As a Company Administrator, I want to analyze maintenance costs and efficiency so that I can optimize our maintenance program
+
+**Acceptance Criteria:**
+
+- [ ] Maintenance request creation with issue description, priority, and affected component
+- [ ] Work order generation with technician assignment, estimated duration, and required resources
+- [ ] Maintenance execution tracking with start time, progress updates, and completion status
+- [ ] Maintenance documentation including photos, notes, parts used, and labor hours
+- [ ] Maintenance cost tracking including labor, parts, and external service costs
+- [ ] Maintenance scheduling with calendar integration and resource availability
+- [ ] Maintenance history and trend analysis for predictive maintenance
+- [ ] Maintenance compliance tracking for regulatory requirements
+
+**Technical Requirements:**
+
+- Maintenance record table with component relationship and workflow status
+- Work order management system with assignment and tracking
+- File upload system for maintenance documentation
+- Maintenance scheduling engine with calendar integration
+- Maintenance cost analysis and reporting system
+
+### 3.5 Real-Time Dashboard & Analytics
+
+**Feature Description:**
+Comprehensive dashboard providing real-time visibility into asset health, maintenance status, and operational metrics.
+
+**User Stories:**
+
+- As an Asset Manager, I want to see a dashboard of all asset health so that I can quickly identify issues
+- As an Operations Supervisor, I want to view downtime metrics so that I can assess operational impact
+- As a Company Administrator, I want to analyze maintenance costs and trends so that I can make budget decisions
+- As a Maintenance Technician, I want to see my assigned work orders so that I can prioritize my tasks
+
+**Acceptance Criteria:**
+
+- [ ] Real-time asset status overview with color-coded health indicators
+- [ ] Component health summary showing counts by status (operational, down, maintenance)
+- [ ] Maintenance metrics including MTTR, MTBF, and maintenance cost per asset
+- [ ] Downtime analysis with root cause categorization and trend analysis
+- [ ] Work order dashboard showing assigned, in-progress, and completed tasks
+- [ ] Cost analysis dashboard with maintenance spend by asset, component, and time period
+- [ ] Performance metrics including asset utilization, availability, and reliability
+- [ ] Customizable dashboard widgets and report generation
+
+**Technical Requirements:**
+
+- Real-time data aggregation and caching system
+- Dashboard widget framework with customizable layouts
+- Report generation engine with multiple output formats
+- Performance optimization for large datasets
+- Mobile-responsive dashboard design
+
+### 3.6 Notification & Alert System
+
+**Feature Description:**
+Intelligent notification system providing timely alerts for maintenance needs, status changes, and critical issues.
+
+**User Stories:**
+
+- As an Asset Manager, I want to receive alerts when components fail so that I can respond quickly
+- As a Maintenance Technician, I want to be notified of new work orders so that I can start work promptly
+- As an Operations Supervisor, I want alerts for maintenance that will impact operations so that I can plan accordingly
+- As a Company Administrator, I want configurable notification preferences so that I receive relevant information
+
+**Acceptance Criteria:**
+
+- [ ] Real-time alerts for component failures and status changes
+- [ ] Maintenance schedule reminders and overdue notifications
+- [ ] Work order assignment notifications to technicians
+- [ ] Operational impact alerts for planned maintenance
+- [ ] Configurable notification preferences by user role and preferences
+- [ ] Multiple notification channels (email, SMS, in-app, push notifications)
+- [ ] Escalation rules for critical issues and overdue maintenance
+- [ ] Notification history and delivery status tracking
+
+**Technical Requirements:**
+
+- Event-driven notification system with real-time processing
+- Multi-channel notification delivery system
+- User preference management for notification settings
+- Escalation workflow engine
+- Notification delivery tracking and analytics
+
+### 3.7 Authentication & Security
+
+**Feature Description:**
+Custom JWT-based authentication system with username/password credentials, providing stateless authentication while maintaining security through secure password hashing and token-based authorization. The system is designed for easy future migration to OAuth providers.
+
+**User Stories:**
+
+- As a user, I want secure login with username/password credentials so that I can access the system
+- As a Company Administrator, I want to control user access and permissions so that sensitive data is protected
+- As a Super Administrator, I want to monitor security events so that I can detect and respond to threats
+- As a compliance officer, I want audit trails for all user actions so that we can meet regulatory requirements
+
+**Acceptance Criteria:**
+
+- [ ] Custom username/password authentication with secure password hashing (bcrypt/argon2)
+- [ ] JWT token-based session management with stateless authentication
+- [ ] Role-based access control with granular permissions
+- [ ] Session management with configurable timeout and token refresh
+- [ ] Password policy enforcement with complexity requirements
+- [ ] Audit logging for all user actions and system events
+- [ ] Data encryption at rest and in transit
+- [ ] API endpoint protection with JWT token validation
+- [ ] Multi-tenancy security with company-scoped data isolation
+- [ ] SQL injection prevention with prepared statements
+
+**Technical Requirements:**
+
+- Custom authentication system using username/password credentials
+- JWT token generation and validation with stored secret
+- Bearer token authentication in API Authorization headers
+- Secure password hashing using bcrypt/argon2 algorithms
+- Prepared statements with mysql2 for SQL injection prevention
+- Comprehensive audit logging system
+- Security monitoring and threat detection
+- Future-ready architecture for OAuth provider migration
+
+---
+
+## 4. User Flows & Workflows
+
+### 4.1 Asset Registration & Setup
+
+**Primary User:** Company Administrator  
+**Goal:** Register new assets and configure the asset management system
+
+#### 4.1.1 New Asset Registration Flow
+
+**Step-by-Step Process:**
+
+1. **Access Asset Management**
+
+   - User navigates to Assets section from main dashboard
+   - System displays existing assets list with search/filter options
+
+2. **Initiate Asset Registration**
+
+   - User clicks "Add New Asset" button
+   - System presents asset registration form
+
+3. **Asset Information Entry**
+
+   - **Required Fields:**
+     - Asset Code (unique identifier)
+     - Asset Name/Description
+     - Asset Type (dropdown with predefined options)
+     - Location (hierarchical selection)
+   - **Optional Fields:**
+     - Model/Manufacturer
+     - Serial Number
+     - Purchase Date
+     - Purchase Cost
+     - Warranty Information
+     - Specifications (JSON field for custom data)
+
+4. **Validation & Confirmation**
+
+   - System validates asset code uniqueness within company
+   - User reviews entered information
+   - User clicks "Save Asset"
+
+5. **Asset Creation**
+   - System creates asset record with status "operational"
+   - System generates audit log entry
+   - User receives confirmation message
+   - Asset appears in assets list
+
+**Decision Points:**
+
+- If asset code already exists → Show error message, allow code modification
+- If required fields missing → Highlight missing fields, prevent submission
+- If location not found → Offer to create new location
+
+#### 4.1.2 Bulk Asset Import Flow
+
+**Step-by-Step Process:**
+
+1. **Access Import Function**
+
+   - User navigates to Assets → Import
+   - System displays import options and template download
+
+2. **Template Preparation**
+
+   - User downloads CSV template
+   - User populates template with asset data
+   - User validates data completeness
+
+3. **File Upload**
+
+   - User uploads populated CSV file
+   - System validates file format and structure
+   - System performs data validation
+
+4. **Data Review**
+
+   - System displays preview of imported data
+   - User reviews validation results
+   - User identifies and corrects errors
+
+5. **Import Execution**
+   - User confirms import
+   - System processes bulk import
+   - System generates import report
+
+**Decision Points:**
+
+- If file format invalid → Show error message, request correct format
+- If validation errors found → Allow user to correct and re-upload
+- If duplicate asset codes → Offer merge or skip options
+
+### 4.2 Component Management Workflow
+
+**Primary User:** Asset Manager  
+**Goal:** Add and manage components within assets
+
+#### 4.2.1 Component Installation Flow
+
+**Step-by-Step Process:**
+
+1. **Select Target Asset**
+
+   - User navigates to asset details page
+   - User views existing components list
+   - User clicks "Add Component"
+
+2. **Component Information Entry**
+
+   - **Required Fields:**
+     - Component Code
+     - Component Name
+     - Component Type
+     - Position within asset
+   - **Optional Fields:**
+     - Serial Number
+     - Part Number
+     - Manufacturer
+     - Installation Date
+     - Purchase Cost
+     - Warranty Information
+
+3. **Component Registration**
+
+   - System validates component code uniqueness within asset
+   - User confirms component information
+   - System creates component record with status "installed"
+
+4. **Asset Status Update**
+   - System updates asset component count
+   - System generates audit log entry
+   - Component appears in asset's component list
+
+**Decision Points:**
+
+- If component code exists → Show error, allow code modification
+- If position conflicts → Suggest alternative positions
+- If warranty expired → Show warning message
+
+#### 4.2.2 Component Transfer Flow
+
+**Step-by-Step Process:**
+
+1. **Initiate Transfer**
+
+   - User selects component from asset details
+   - User clicks "Transfer Component"
+   - System displays transfer form
+
+2. **Transfer Details**
+
+   - User selects destination asset
+   - User enters transfer reason
+   - User adds transfer notes (optional)
+
+3. **Transfer Validation**
+
+   - System validates destination asset exists
+   - System checks component compatibility
+   - System verifies user permissions
+
+4. **Transfer Execution**
+
+   - System creates ComponentTransfer record
+   - System updates component's asset_id
+   - System updates component status to "installed"
+   - System generates audit log entries
+
+5. **Notification**
+   - System notifies relevant users
+   - Transfer appears in component history
+
+**Decision Points:**
+
+- If destination asset incompatible → Show error, suggest alternatives
+- If component under maintenance → Require maintenance completion first
+- If insufficient permissions → Escalate to asset manager
+
+### 4.3 Maintenance Request & Execution Workflow
+
+**Primary User:** Maintenance Technician  
+**Goal:** Report issues and execute maintenance tasks
+
+#### 4.3.1 Issue Reporting Flow
+
+**Step-by-Step Process:**
+
+1. **Identify Issue**
+
+   - Technician observes component issue
+   - Technician accesses mobile app or web interface
+   - Technician navigates to specific asset/component
+
+2. **Create Maintenance Request**
+
+   - Technician clicks "Report Issue"
+   - System displays maintenance request form
+   - **Required Information:**
+     - Issue description
+     - Priority level (Low, Medium, High, Critical)
+     - Affected component
+     - Issue category (mechanical, electrical, software, etc.)
+
+3. **Additional Details**
+
+   - Technician adds detailed description
+   - Technician uploads photos (optional)
+   - Technician estimates urgency
+   - Technician adds location notes
+
+4. **Request Submission**
+
+   - System validates required information
+   - System creates MaintenanceRecord with status "reported"
+   - System automatically updates component status to "repairing"
+   - System generates notification to asset manager
+
+5. **Assignment & Scheduling**
+   - Asset manager reviews request
+   - Asset manager assigns technician (if not self-reported)
+   - Asset manager schedules maintenance
+   - System updates maintenance record status to "scheduled"
+
+**Decision Points:**
+
+- If critical priority → Send immediate alerts to managers
+- If component already under maintenance → Merge with existing record
+- If insufficient information → Request additional details
+
+#### 4.3.2 Maintenance Execution Flow
+
+**Step-by-Step Process:**
+
+1. **Work Order Assignment**
+
+   - Technician receives work order notification
+   - Technician reviews maintenance details
+   - Technician accepts or requests reassignment
+
+2. **Maintenance Preparation**
+
+   - Technician gathers required tools and parts
+   - Technician accesses maintenance procedures
+   - Technician updates status to "in progress"
+
+3. **Maintenance Execution**
+
+   - Technician performs maintenance work
+   - Technician documents work performed
+   - Technician uploads photos and notes
+   - Technician records parts used and labor hours
+
+4. **Maintenance Completion**
+
+   - Technician tests component functionality
+   - Technician updates maintenance record
+   - Technician enters completion details:
+     - Actual duration
+     - Parts cost
+     - Labor cost
+     - Completion notes
+
+5. **Status Updates**
+   - System updates maintenance record status to "completed"
+   - System updates component status to "installed"
+   - System calculates total maintenance cost
+   - System generates completion notification
+
+**Decision Points:**
+
+- If additional parts needed → Create parts request
+- If maintenance incomplete → Update status to "pending parts"
+- If component replacement required → Initiate component replacement flow
+
+### 4.4 Dashboard & Analytics Workflow
+
+**Primary User:** Operations Supervisor  
+**Goal:** Monitor asset health and operational metrics
+
+#### 4.4.1 Dashboard Overview Flow
+
+**Step-by-Step Process:**
+
+1. **Dashboard Access**
+
+   - User logs into system
+   - System displays personalized dashboard
+   - Dashboard shows role-specific widgets
+
+2. **Asset Health Overview**
+
+   - User views asset status summary
+   - Color-coded indicators show operational status
+   - User can drill down into specific assets
+
+3. **Component Health Analysis**
+
+   - User reviews component status breakdown
+   - User identifies components requiring attention
+   - User accesses component maintenance history
+
+4. **Maintenance Metrics Review**
+
+   - User views maintenance performance metrics
+   - User analyzes MTTR and MTBF trends
+   - User reviews maintenance cost analysis
+
+5. **Action Items**
+   - User identifies maintenance priorities
+   - User creates maintenance schedules
+   - User assigns resources to critical issues
+
+**Decision Points:**
+
+- If critical issues found → Generate immediate alerts
+- If metrics show concerning trends → Create investigation tasks
+- If resource constraints identified → Escalate to management
+
+### 4.5 Reporting & Analytics Workflow
+
+**Primary User:** Company Administrator  
+**Goal:** Generate reports and analyze maintenance performance
+
+#### 4.5.1 Custom Report Generation Flow
+
+**Step-by-Step Process:**
+
+1. **Report Builder Access**
+
+   - User navigates to Reports section
+   - User selects "Create Custom Report"
+   - System displays report builder interface
+
+2. **Report Configuration**
+
+   - User selects report type (asset, component, maintenance, cost)
+   - User defines date range and filters
+   - User selects data fields to include
+   - User configures grouping and sorting
+
+3. **Report Preview**
+
+   - System generates report preview
+   - User reviews data accuracy
+   - User adjusts configuration if needed
+
+4. **Report Generation**
+
+   - User confirms report configuration
+   - System generates final report
+   - System provides download options (PDF, Excel, CSV)
+
+5. **Report Distribution**
+   - User saves report for future use
+   - User schedules automated report delivery
+   - User shares report with stakeholders
+
+**Decision Points:**
+
+- If data volume too large → Offer data sampling options
+- If report generation fails → Provide error details and retry options
+- If sensitive data included → Apply appropriate access controls
+
+### 4.6 Error Handling & Exception Flows
+
+#### 4.6.1 System Error Handling
+
+- **Network Connectivity Issues**: Offline mode with data synchronization
+- **Data Validation Errors**: Clear error messages with correction guidance
+- **Permission Denied**: Redirect to appropriate access level
+- **System Timeout**: Graceful degradation with retry options
+
+#### 4.6.2 Business Logic Exceptions
+
+- **Duplicate Asset Codes**: Validation with suggested alternatives
+- **Component Transfer Conflicts**: Resolution workflow with manager approval
+- **Maintenance Schedule Conflicts**: Automatic rescheduling suggestions
+- **Data Integrity Issues**: Audit trail with rollback capabilities
+
+---
+
+## 5. Performance Requirements
+
+#### 5.1 Response Time Targets
+
+- **Dashboard Load**: < 2 seconds for initial load
+- **API Responses**: < 500ms for 95% of requests
+- **Search Queries**: < 1 second for complex searches
+- **File Uploads**: < 5 seconds for files up to 10MB
+
+#### 5.2 Scalability Targets
+
+- **Concurrent Users**: Support 10,000+ concurrent users
+- **Data Volume**: Handle 1M+ assets per tenant
+- **API Throughput**: 10,000+ requests per minute
+- **Database**: Support 100M+ records per table
+
+---
+
+## 6. Implementation Roadmap & Phases
+
+### 6.1 Phase 1: Core Foundation (Months 1-3)
+
+**Objective:** Establish basic multi-tenant architecture and core asset management functionality.
+
+**Deliverables:**
+
+- [ ] Multi-tenant company management system
+- [ ] Basic user authentication and role-based access control
+- [ ] Asset registration and management
+- [ ] Component registration and basic tracking
+- [ ] Simple maintenance record creation
+- [ ] Basic dashboard with asset status overview
+
+**Success Criteria:**
+
+- System supports 10+ companies with complete data isolation
+- Users can register assets and components
+- Basic maintenance tracking is functional
+- Dashboard displays asset health metrics
+
+**Technical Milestones:**
+
+- Database schema implementation
+- Authentication system setup
+- Core API endpoints development
+- Basic frontend application
+
+### 6.2 Phase 2: Enhanced Workflow Management (Months 4-6)
+
+**Objective:** Implement comprehensive maintenance workflows and advanced features.
+
+**Deliverables:**
+
+- [ ] Advanced maintenance workflow management
+- [ ] Component transfer capabilities
+- [ ] File upload and attachment system
+- [ ] Maintenance scheduling and calendar integration
+- [ ] Enhanced dashboard with analytics
+- [ ] Basic reporting functionality
+
+**Success Criteria:**
+
+- Complete maintenance lifecycle management
+- Component transfer history tracking
+- Maintenance documentation capabilities
+- Advanced analytics and reporting
+
+**Technical Milestones:**
+
+- Workflow engine implementation
+- File storage system integration
+- Calendar API integration
+- Advanced dashboard widgets
+
+### 6.3 Phase 3: Advanced Features & Integrations (Months 7-9)
+
+**Objective:** Add advanced features, integrations, and optimization capabilities.
+
+**Deliverables:**
+
+- [ ] Real-time notifications and alert system
+- [ ] Advanced analytics and predictive insights
+- [ ] Third-party system integrations (ERP, CMMS)
+- [ ] Mobile-responsive design optimization
+- [ ] Performance optimization and caching
+- [ ] Advanced security features (SSO, MFA)
+
+**Success Criteria:**
+
+- Real-time notifications working across all channels
+- Integration with at least 2 major third-party systems
+- Mobile app functionality for field technicians
+- Performance targets met (< 2s dashboard load)
+
+**Technical Milestones:**
+
+- WebSocket implementation for real-time features
+- Integration API development
+- Mobile app development
+- Performance optimization
+
+### 6.4 Phase 4: Enterprise Features & Scale (Months 10-12)
+
+**Objective:** Enterprise-grade features, compliance, and scalability.
+
+**Deliverables:**
+
+- [ ] Advanced compliance and audit features
+- [ ] Enterprise SSO integration
+- [ ] Advanced reporting and business intelligence
+- [ ] API rate limiting and enterprise security
+- [ ] Disaster recovery and backup systems
+- [ ] Multi-region deployment capability
+
+**Success Criteria:**
+
+- SOC 2 Type II compliance achieved
+- Support for 1000+ concurrent users
+- Enterprise SSO integration working
+- Multi-region deployment operational
+
+**Technical Milestones:**
+
+- Compliance framework implementation
+- Enterprise security hardening
+- Multi-region infrastructure setup
+- Advanced monitoring and alerting
+
+### 6.5 Future Enhancements (Phase 5+)
+
+**Long-term Vision:**
+
+- [ ] IoT sensor integration and real-time monitoring
+- [ ] AI-powered predictive maintenance
+- [ ] Advanced mobile applications with offline capabilities
+- [ ] QR code and RFID integration
+- [ ] Advanced cost analysis and optimization
+- [ ] Machine learning for maintenance recommendations
+
+---
+
+## 7. Success Metrics & KPIs
+
+### 7.1 Primary Success Metrics
+
+| Metric                     | Definition                           | Target                       | Measurement Method                  |
+| -------------------------- | ------------------------------------ | ---------------------------- | ----------------------------------- |
+| **MTTR Reduction**         | Mean Time To Repair improvement      | 30% reduction                | Compare before/after implementation |
+| **Asset Utilization**      | Percentage of assets operational     | 95% uptime                   | Real-time status monitoring         |
+| **Data Accuracy**          | Completeness of asset/component data | 95% data completeness        | Data quality audits                 |
+| **User Adoption**          | Active users per company             | 80% of assigned users active | User activity tracking              |
+| **Maintenance Efficiency** | Cost per maintenance hour            | 40% improvement              | Cost analysis reports               |
+
+### 7.2 Technical Performance Metrics
+
+| Metric                  | Target                         | Measurement                     |
+| ----------------------- | ------------------------------ | ------------------------------- |
+| **Dashboard Load Time** | < 2 seconds                    | Performance monitoring          |
+| **API Response Time**   | < 500ms (95th percentile)      | Application monitoring          |
+| **System Uptime**       | 99.9% availability             | Infrastructure monitoring       |
+| **Data Processing**     | < 1 second for complex queries | Database performance monitoring |
+| **File Upload Speed**   | < 5 seconds for 10MB files     | Network performance testing     |
+
+### 7.3 Business Impact Metrics
+
+| Metric                 | Definition                     | Target                    |
+| ---------------------- | ------------------------------ | ------------------------- |
+| **Cost Savings**       | Reduction in maintenance costs | 25% reduction             |
+| **Downtime Reduction** | Unplanned asset downtime       | 40% reduction             |
+| **Compliance Score**   | Audit readiness                | 100% compliance           |
+| **User Satisfaction**  | User experience rating         | 4.5/5.0 rating            |
+| **ROI**                | Return on investment           | 300% ROI within 18 months |
+
+---
+
+## 8. Testing & Quality Assurance
+
+### 8.1 Testing Strategy
+
+**Testing Approach:** Comprehensive testing strategy covering unit, integration, system, and user acceptance testing.
+
+#### 8.1.1 Unit Testing
+
+- **Coverage Target**: 90% code coverage for critical business logic
+- **Framework**: Jest for JavaScript/TypeScript testing
+- **Scope**: Individual functions, components, and business logic
+- **Automation**: Automated testing in CI/CD pipeline
+
+#### 8.1.2 Integration Testing
+
+- **API Testing**: Comprehensive REST API endpoint testing
+- **Database Testing**: Data integrity and transaction testing
+- **Third-Party Integration**: External service integration testing
+- **Framework**: Supertest for API testing, Testcontainers for database testing
+
+#### 8.1.3 System Testing
+
+- **End-to-End Testing**: Complete user workflow testing
+- **Performance Testing**: Load testing with 10,000+ concurrent users
+- **Security Testing**: Penetration testing and vulnerability assessment
+- **Framework**: Playwright for E2E testing, K6 for performance testing
+
+#### 8.1.4 User Acceptance Testing
+
+- **Beta Testing**: Pilot program with select customers
+- **Usability Testing**: User experience and interface testing
+- **Accessibility Testing**: WCAG 2.1 AA compliance testing
+- **Mobile Testing**: Cross-device and cross-platform testing
+
+### 8.2 Quality Assurance Standards
+
+#### 8.2.1 Code Quality
+
+- **Code Reviews**: Mandatory peer review for all code changes
+- **Static Analysis**: ESLint, Prettier, and SonarQube integration
+- **Documentation**: Comprehensive code documentation and API documentation
+- **Standards**: Follow industry best practices and coding standards
+
+#### 8.2.2 Performance Standards
+
+- **Response Time**: API responses under 500ms (95th percentile)
+- **Load Capacity**: Support 10,000+ concurrent users
+- **Scalability**: Horizontal scaling capability
+- **Monitoring**: Real-time performance monitoring and alerting
+
+#### 8.2.3 Security Standards
+
+- **Vulnerability Scanning**: Regular security scans and updates
+- **Penetration Testing**: Quarterly security assessments
+- **Compliance**: SOC 2 Type II and GDPR compliance
+- **Data Protection**: Encryption at rest and in transit
+
+### 8.3 Testing Environments
+
+#### 8.3.1 Development Environment
+
+- **Local Development**: Docker Compose setup for local testing
+- **Feature Branches**: Isolated testing for feature development
+- **Unit Testing**: Automated unit tests on every commit
+
+#### 8.3.2 Staging Environment
+
+- **Integration Testing**: Full system integration testing
+- **User Acceptance**: Beta user testing and feedback
+- **Performance Testing**: Load testing and optimization
+- **Security Testing**: Vulnerability assessment and penetration testing
+
+#### 8.3.3 Production Environment
+
+- **Monitoring**: Continuous monitoring and alerting
+- **Health Checks**: Automated health checks and rollback
+- **Incident Response**: 24/7 monitoring and incident response
+- **Performance Tracking**: Real-time performance metrics
+
+### 8.4 Test Data Management
+
+#### 8.4.1 Test Data Strategy
+
+- **Data Privacy**: Anonymized production data for testing
+- **Data Generation**: Automated test data generation
+- **Data Cleanup**: Automated test data cleanup and reset
+- **Data Security**: Secure handling of test data
+
+#### 8.4.2 Test Automation
+
+- **CI/CD Integration**: Automated testing in deployment pipeline
+- **Regression Testing**: Automated regression test suite
+- **Smoke Testing**: Critical path testing after deployments
+- **Monitoring**: Test execution monitoring and reporting
+
+---
+
+## 9. Non-Functional Requirements
+
+### 9.1 Performance Requirements
+
+- **Scalability**: Support 100+ companies, each with 10,000+ assets
+- **Concurrency**: Handle 10,000+ concurrent users
+- **Response Time**: Dashboard loads under 2 seconds with 50,000+ assets
+- **Throughput**: Process 10,000+ API requests per minute
+- **Data Volume**: Support 100M+ records per table
+
+### 9.2 Security Requirements
+
+- **Data Isolation**: Complete tenant data separation
+- **Access Control**: Role-based permissions with principle of least privilege
+- **Encryption**: AES-256 encryption at rest, TLS 1.3 in transit
+- **Authentication**: Multi-factor authentication support
+- **Audit Trail**: Comprehensive logging of all user actions
+- **Compliance**: SOC 2 Type II and GDPR compliance
+
+### 9.3 Reliability Requirements
+
+- **Availability**: 99.9% uptime SLA
+- **Disaster Recovery**: RTO < 4 hours, RPO < 1 hour
+- **Backup**: Automated daily backups with point-in-time recovery
+- **Monitoring**: 24/7 system monitoring and alerting
+- **Error Handling**: Graceful degradation and error recovery
+
+### 9.4 Usability Requirements
+
+- **Accessibility**: WCAG 2.1 AA compliance
+- **Localization**: Support for English and Bahasa Indonesia
+- **Mobile Support**: Responsive design for mobile devices
+- **Browser Support**: Chrome, Firefox, Safari, Edge (latest 2 versions)
+- **User Experience**: Intuitive interface requiring minimal training
+
+---
+
+## 10. Cost Analysis & Pricing Strategy
+
+### 10.1 Development Cost Analysis
+
+#### 10.1.1 Development Team Structure
+
+| Role                       | Count | Duration  | Monthly Cost |     Total Cost |
+| -------------------------- | ----- | --------- | -----------: | -------------: |
+| **Product Manager**        | 1     | 12 months |      $12,000 |       $144,000 |
+| **Technical Lead**         | 1     | 12 months |      $15,000 |       $180,000 |
+| **Senior Developers**      | 3     | 12 months |      $12,000 |       $432,000 |
+| **Frontend Developers**    | 2     | 10 months |      $10,000 |       $200,000 |
+| **Backend Developers**     | 2     | 10 months |      $10,000 |       $200,000 |
+| **DevOps Engineer**        | 1     | 8 months  |      $11,000 |        $88,000 |
+| **QA Engineer**            | 1     | 8 months  |       $8,000 |        $64,000 |
+| **UI/UX Designer**         | 1     | 6 months  |       $9,000 |        $54,000 |
+| **Total Development Cost** |       |           |              | **$1,362,000** |
+
+#### 10.1.2 Infrastructure & Operational Costs
+
+| Component                      | Monthly Cost | Annual Cost |
+| ------------------------------ | -----------: | ----------: |
+| **Cloud Infrastructure (AWS)** |       $2,500 |     $30,000 |
+| **Database Hosting**           |       $1,200 |     $14,400 |
+| **CDN & Storage**              |         $800 |      $9,600 |
+| **Monitoring & Logging**       |         $500 |      $6,000 |
+| **Security & Compliance**      |       $1,000 |     $12,000 |
+| **Third-Party Services**       |       $1,500 |     $18,000 |
+| **Total Operational Cost**     |   **$7,500** | **$90,000** |
+
+### 10.2 Pricing Strategy
+
+#### 10.2.1 Subscription Tiers
+
+**Starter Plan - $99/month**
+
+- Up to 100 assets
+- Up to 5 users
+- Basic maintenance tracking
+- Standard support
+- Mobile app access
+
+**Professional Plan - $299/month**
+
+- Up to 1,000 assets
+- Up to 25 users
+- Advanced analytics
+- Component transfers
+- Priority support
+- API access
+
+**Enterprise Plan - $799/month**
+
+- Unlimited assets
+- Unlimited users
+- Custom integrations
+- Advanced reporting
+- Dedicated support
+- SSO integration
+- Custom branding
+
+**Custom Enterprise - Contact Sales**
+
+- Custom pricing based on requirements
+- On-premise deployment options
+- Custom development services
+- SLA guarantees
+- Training and consulting
+
+#### 10.2.2 Revenue Projections
+
+**Year 1 Projections:**
+
+- 50 Starter customers: $59,400
+- 30 Professional customers: $107,640
+- 10 Enterprise customers: $95,880
+- **Total Annual Revenue: $262,920**
+
+**Year 2 Projections:**
+
+- 150 Starter customers: $178,200
+- 100 Professional customers: $358,800
+- 25 Enterprise customers: $239,700
+- **Total Annual Revenue: $776,700**
+
+**Year 3 Projections:**
+
+- 300 Starter customers: $356,400
+- 200 Professional customers: $717,600
+- 50 Enterprise customers: $479,400
+- **Total Annual Revenue: $1,553,400**
+
+### 10.3 Return on Investment (ROI)
+
+#### 10.3.1 Customer ROI Benefits
+
+- **Reduced Downtime**: 30% reduction in unplanned downtime
+- **Improved Efficiency**: 40% improvement in maintenance efficiency
+- **Cost Savings**: Average $50,000 annual savings per customer
+- **Compliance**: Reduced audit costs and compliance risks
+
+#### 10.3.2 Break-Even Analysis
+
+- **Development Investment**: $1,362,000
+- **Annual Operational Cost**: $90,000
+- **Break-Even Point**: 18 months with 100+ customers
+- **ROI Timeline**: 300% ROI within 24 months
+
+---
+
+## 11. Risk Assessment & Mitigation
+
+### 11.1 Technical Risks
+
+| Risk                          | Impact   | Probability | Mitigation Strategy                             |
+| ----------------------------- | -------- | ----------- | ----------------------------------------------- |
+| **Data Migration Complexity** | High     | Medium      | Phased migration approach with validation       |
+| **Performance at Scale**      | High     | Medium      | Load testing and performance optimization       |
+| **Integration Failures**      | Medium   | High        | Robust error handling and fallback mechanisms   |
+| **Security Vulnerabilities**  | Critical | Low         | Regular security audits and penetration testing |
+
+### 11.2 Business Risks
+
+| Risk                         | Impact | Probability | Mitigation Strategy                             |
+| ---------------------------- | ------ | ----------- | ----------------------------------------------- |
+| **User Adoption Resistance** | High   | Medium      | Comprehensive training and change management    |
+| **Data Quality Issues**      | Medium | High        | Data validation and cleansing tools             |
+| **Competitive Pressure**     | Medium | Medium      | Continuous feature development and innovation   |
+| **Regulatory Changes**       | High   | Low         | Flexible architecture and compliance monitoring |
+
+### 11.3 Operational Risks
+
+| Risk                    | Impact | Probability | Mitigation Strategy                            |
+| ----------------------- | ------ | ----------- | ---------------------------------------------- |
+| **Key Personnel Loss**  | High   | Medium      | Knowledge documentation and cross-training     |
+| **Vendor Dependencies** | Medium | Medium      | Multi-vendor strategy and contingency planning |
+| **Budget Overruns**     | Medium | Medium      | Agile development with regular budget reviews  |
+| **Timeline Delays**     | Medium | Medium      | Buffer time and milestone tracking             |
+
+---
+
+## 12. Compliance & Regulatory Considerations
+
+### 12.1 Data Protection & Privacy
+
+- **GDPR Compliance**: Right to be forgotten, data portability, consent management
+- **Data Retention**: Configurable retention policies per tenant
+- **Data Anonymization**: Capability to anonymize personal data
+- **Cross-Border Transfers**: Compliance with international data transfer regulations
+
+### 12.2 Industry Standards
+
+- **ISO 27001**: Information security management system
+- **SOC 2 Type II**: Security, availability, and confidentiality controls
+- **NIST Cybersecurity Framework**: Risk management and security controls
+- **Industry-Specific**: Compliance with aviation, manufacturing, or energy sector regulations
+
+### 12.3 Audit & Reporting
+
+- **Audit Trail**: Comprehensive logging of all system activities
+- **Compliance Reporting**: Automated compliance status reporting
+- **Data Lineage**: Track data flow and transformations
+- **Access Logs**: Detailed user access and permission logs
+
+---
+
+## 13. Appendices
+
+### 13.1 API Endpoints Specification
+
+**Base URL**: `https://api.assetcore.com/v1`
+
+#### Company Management
+
+```
+GET    /companies                    # List companies (Super Admin only)
+POST   /companies                    # Create new company
+GET    /companies/{id}               # Get company details
+PUT    /companies/{id}               # Update company
+DELETE /companies/{id}               # Delete company
+```
+
+#### Asset Management
+
+```
+GET    /companies/{id}/assets        # List company assets
+POST   /companies/{id}/assets        # Create new asset
+GET    /companies/{id}/assets/{asset_id}  # Get asset details
+PUT    /companies/{id}/assets/{asset_id}  # Update asset
+DELETE /companies/{id}/assets/{asset_id}  # Delete asset
+```
+
+#### Component Management
+
+```
+GET    /companies/{id}/components    # List company components
+POST   /companies/{id}/components   # Create new component
+GET    /companies/{id}/components/{component_id}  # Get component details
+PUT    /companies/{id}/components/{component_id}  # Update component
+DELETE /companies/{id}/components/{component_id}  # Delete component
+POST   /companies/{id}/components/{component_id}/transfer  # Transfer component
+```
+
+#### Maintenance Management
+
+```
+GET    /companies/{id}/maintenance  # List maintenance records
+POST   /companies/{id}/maintenance  # Create maintenance record
+GET    /companies/{id}/maintenance/{record_id}  # Get maintenance details
+PUT    /companies/{id}/maintenance/{record_id}  # Update maintenance record
+POST   /companies/{id}/maintenance/{record_id}/complete  # Complete maintenance
+```
+
+### 13.2 Database Schema Examples
+
+#### Sample Asset Data
+
+```sql
+INSERT INTO assets (id, company_id, asset_code, name, type, status, location_id)
+VALUES
+  ('550e8400-e29b-41d4-a716-446655440001', '550e8400-e29b-41d4-a716-446655440000', 'AC-001', 'Boeing 737-800', 'aircraft', 'operational', '550e8400-e29b-41d4-a716-446655440010'),
+  ('550e8400-e29b-41d4-a716-446655440002', '550e8400-e29b-41d4-a716-446655440000', 'TR-001', 'Caterpillar Excavator', 'vehicle', 'maintenance', '550e8400-e29b-41d4-a716-446655440011');
+```
+
+#### Sample Component Data
+
+```sql
+INSERT INTO components (id, asset_id, component_code, name, type, status, position)
+VALUES
+  ('550e8400-e29b-41d4-a716-446655440020', '550e8400-e29b-41d4-a716-446655440001', 'ENG-001', 'CFM56-7B Engine', 'engine', 'installed', 'left'),
+  ('550e8400-e29b-41d4-a716-446655440021', '550e8400-e29b-41d4-a716-446655440001', 'ENG-002', 'CFM56-7B Engine', 'engine', 'repairing', 'right');
+```
+
+### 13.3 User Interface Wireframes
+
+**Dashboard Layout:**
+
+- Header: Navigation, user profile, notifications
+- Sidebar: Main navigation menu
+- Content Area: Dashboard widgets, asset status cards
+- Footer: System status, version information
+
+**Asset Management Page:**
+
+- Asset list with search and filter options
+- Asset detail modal with component list
+- Add/Edit asset form with validation
+- Bulk operations toolbar
+
+**Maintenance Workflow:**
+
+- Issue reporting form with priority selection
+- Work order assignment interface
+- Maintenance execution checklist
+- Completion form with cost tracking
+
+---
+
+**Document Status:** Complete  
+**Last Updated:** [Current Date]  
+**Next Review:** [Date + 3 months]  
+**Approved By:** [Stakeholder Name]
