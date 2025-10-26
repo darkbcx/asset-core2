@@ -38,8 +38,20 @@ src/
 │
 ├── lib/                     # Shared utilities
 │   ├── db.ts                # Database connector (mysql2)
-│   ├── apiClient.ts         # Frontend SDK (fetch wrapper)
-│   └── validators.ts        # Zod schemas, etc.
+│   ├── api-client/          # Frontend SDK (fetch wrapper)
+│   │   ├── index.ts         # Export all clients
+│   │   ├── assets.ts        # Asset-related API calls
+│   │   ├── components.ts    # Component-related API calls
+│   │   ├── maintenance.ts   # Maintenance-related API calls
+│   │   ├── users.ts         # User-related API calls
+│   │   └── companies.ts     # Company-related API calls
+│   └── validators/           # Zod validation schemas
+│       ├── index.ts         # Export all validators
+│       ├── assets.ts        # Asset validation schemas
+│       ├── components.ts    # Component validation schemas
+│       ├── maintenance.ts   # Maintenance validation schemas
+│       ├── users.ts         # User validation schemas
+│       └── companies.ts     # Company validation schemas
 │
 └── types/                   # Shared TypeScript types
     ├── user.ts
@@ -48,15 +60,47 @@ src/
 
 ## Layer Responsibilities
 
-| **Layer**                     | **Folder Example**                    | **Purpose**                                                                         | **Depends On**             | **Migration to Hono/Express**     |
-| ----------------------------- | ------------------------------------- | ----------------------------------------------------------------------------------- | -------------------------- | --------------------------------- |
-| **UI / Presentation**         | `src/app/`                            | React components, pages, and hooks. Renders UI and calls the API client.            | ✅ `apiClient.ts`          | Unchanged                         |
-| **API Controllers**           | `src/app/api/.../route.ts`            | Next.js route handlers that map HTTP requests → backend calls.                      | ✅ `src/backend/`          | Replaced by new backend routes    |
-| **Backend (Business Logic)**  | `src/backend/*.ts`                    | Core logic (repositories, services, data access). Stateless and framework-agnostic. | ✅ `lib/db.ts`, validators | Moved directly to backend service |
-| **Data Access**               | `src/lib/db.ts`                       | Handles DB connections (mysql2).                                                    | ❌                         | Move with backend                 |
-| **API Client (Frontend SDK)** | `src/lib/apiClient.ts`                | Typed fetch wrapper for frontend. Encapsulates API URL logic.                       | ❌                         | Update base URL only              |
-| **Types / Schemas**           | `src/types/`, `src/lib/validators.ts` | Shared type definitions and validation schemas.                                     | ✅ All layers              | Move to `packages/shared`         |
-| **External Systems**          | —                                     | Third-party integrations (Auth, Storage, etc.).                                     | ✅ Backend                 | Remain backend-side               |
+### UI / Presentation Layer
+- **Folder**: `src/app/`
+- **Purpose**: React components, pages, and hooks. Renders UI and calls the API client.
+- **Depends On**: `api-client`
+- **Migration**: Unchanged
+
+### API Controllers Layer
+- **Folder**: `src/app/api/.../route.ts`
+- **Purpose**: Next.js route handlers that map HTTP requests → backend calls.
+- **Depends On**: `src/backend/`
+- **Migration**: Replaced by new backend routes
+
+### Backend (Business Logic) Layer
+- **Folder**: `src/backend/*.ts`
+- **Purpose**: Core logic (repositories, services, data access). Stateless and framework-agnostic.
+- **Depends On**: `lib/db.ts`, `lib/validators/`
+- **Migration**: Moved directly to backend service
+
+### Data Access Layer
+- **Folder**: `src/lib/db.ts`
+- **Purpose**: Handles DB connections (mysql2).
+- **Depends On**: None
+- **Migration**: Move with backend
+
+### API Client (Frontend SDK) Layer
+- **Folder**: `src/lib/api-client/*.ts`
+- **Purpose**: Typed fetch wrapper for frontend. Encapsulates API URL logic.
+- **Depends On**: None
+- **Migration**: Update base URL only
+
+### Types / Schemas Layer
+- **Folder**: `src/types/`, `src/lib/validators/`
+- **Purpose**: Shared type definitions and validation schemas.
+- **Depends On**: All layers
+- **Migration**: Move to `packages/shared`
+
+### External Systems Layer
+- **Folder**: N/A
+- **Purpose**: Third-party integrations (Auth, Storage, etc.).
+- **Depends On**: Backend
+- **Migration**: Remain backend-side
 
 ## Request Flow Architecture
 
@@ -84,8 +128,8 @@ This demonstrates the complete data flow when a user requests information throug
 
 | Layer          | File                               | Example Function                              |
 | -------------- | ---------------------------------- | --------------------------------------------- |
-| UI             | `/src/app/users/page.tsx`          | `apiClient.getUser("u1")`                     |
-| API Client     | `lib/apiClient.ts`                 | `fetch('/users/'+ userId)`                    |
+| UI             | `/src/app/users/page.tsx`          | `apiClient.users.getUser("u1")`               |
+| API Client     | `lib/api-client/users.ts`          | `fetch('/users/'+ userId)`                    |
 | API Controller | `/src/app/api/users/[id]/route.ts` | Calls `getUserById()` from backend            |
 | Backend        | `/src/backend/users.ts`            | Implements `getUserById()` and `createUser()` |
 | Database       | `/src/lib/db.ts`                   | Uses mysql2 to query data                     |
@@ -118,9 +162,10 @@ This flow ensures clean separation of concerns while maintaining type safety acr
 
 3. **Single Source of Truth for Types**
 
-   - All DTOs and schemas defined in `/types` or `/lib/validators`
+   - All DTOs and schemas defined in `/types` or `/lib/validators/`
    - Shared type definitions across frontend and backend
-   - Zod schemas for runtime validation
+   - Zod schemas for runtime validation (organized by resource)
+   - Type inference from Zod schemas ensures consistency
 
 4. **Future Portability**
 
@@ -153,13 +198,15 @@ packages/
 
    - Move `/src/backend` → `packages/shared/backend`
    - Move `/src/types` → `packages/shared/types`
+   - Move `/src/lib/validators/` → `packages/shared/validators`
    - Update import paths
 
 2. **Update API Client**
 
-   - Update `apiClient` base URL (`NEXT_PUBLIC_API_URL`)
+   - Update `api-client` base URL in each client file (`NEXT_PUBLIC_API_URL`)
    - Modify authentication handling if needed
    - Update error handling for external service
+   - API client structure remains the same (just base URL changes)
 
 3. **Frontend Compatibility**
    - Frontend remains fully functional
@@ -185,14 +232,30 @@ packages/
 ### Frontend Layer (`src/app/`)
 
 - **Component Logic**: Focus on UI logic and user interactions
-- **API Communication**: Use `apiClient` for all backend communication
+- **API Communication**: Use `api-client` module for all backend communication
 - **State Management**: Use React hooks and context for local state
 - **Error Boundaries**: Implement error boundaries for graceful error handling
+
+### API Client Layer (`src/lib/api-client/`)
+
+- **Organization**: Grouped by resource/feature (assets, components, users, etc.)
+- **Type Safety**: Full TypeScript types for all API calls
+- **Error Handling**: Centralized error handling for API requests
+- **Authentication**: Automatic token injection for authenticated requests
+- **Base Configuration**: Shared fetch configuration and base URL
+
+### Validators Layer (`src/lib/validators/`)
+
+- **Organization**: Grouped by resource/feature (assets, components, users, etc.)
+- **Zod Schemas**: Type-safe validation schemas for all entities
+- **Reusability**: Shared between frontend forms and backend API validation
+- **Type Inference**: TypeScript types automatically inferred from schemas
+- **Centralized Export**: All validators exported via index.ts
 
 ### Shared Layer (`src/lib/` & `src/types/`)
 
 - **Database Connection**: Centralized database connection management
-- **API Client**: Typed wrapper for HTTP requests
+- **API Client**: Typed wrapper for HTTP requests (organized by resource)
 - **Validation Schemas**: Zod schemas for request/response validation
 - **Type Definitions**: Shared TypeScript interfaces and types
 
