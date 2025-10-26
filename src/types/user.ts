@@ -20,7 +20,7 @@ export interface User {
   system_role: SystemRole;
   email: string;
   first_name: string;
-  last_name: string;
+  last_name?: string;
   is_active: boolean;
   last_login: Date | null;
   password_hash: string;

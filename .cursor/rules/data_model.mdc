@@ -56,7 +56,7 @@ AssetCore implements a comprehensive database schema designed for multi-tenant a
 | `system_permissions` | JSONB        | System administrator permissions      | NULLABLE         |
 | `email`              | VARCHAR(255) | User email address                    | NOT NULL, UNIQUE |
 | `first_name`         | VARCHAR(100) | User's first name                     | NOT NULL         |
-| `last_name`          | VARCHAR(100) | User's last name                      | NOT NULL         |
+| `last_name`          | VARCHAR(100) | User's last name                      | NULLABLE         |
 | `is_active`          | BOOLEAN      | Account status                        | DEFAULT true     |
 | `last_login`         | TIMESTAMP    | Last login timestamp                  | NULLABLE         |
 | `password_hash`      | VARCHAR(255) | Hashed password for authentication    | NOT NULL         |
