@@ -85,6 +85,12 @@ AssetCore implements a custom authentication system using username/password cred
    - Configure cookie with appropriate security flags
    - Set expiration based on token lifetime
 
+3. **Company Selection (Multi-Company Users)**
+   - Check if user has access to multiple companies
+   - If multiple companies: redirect to `/select-company` page
+   - If single company: set active company cookie automatically
+   - If system admin: proceed to admin dashboard (no company selection)
+
 #### Token Refresh Flow
 1. **Automatic Refresh**
    - Send stored JWT token to refresh endpoint
@@ -95,9 +101,27 @@ AssetCore implements a custom authentication system using username/password cred
    - Redirect to login on refresh failure
    - Clear invalid tokens from storage
 
+#### Company Selection Flow (Multi-Company Users)
+1. **Access Company Selection**
+   - User arrives at `/select-company` page after login
+   - Display list of user's accessible companies
+   - Show company name, role, and primary status
+
+2. **Company Selection**
+   - User selects a company from the list
+   - Store selected company in `active_company_id` cookie
+   - Cookie is HTTP-only for security
+   - Set cookie expiration (7 days)
+
+3. **Redirect to Dashboard**
+   - After selection, redirect to `/dashboard`
+   - Use active company for all data operations
+   - Display company context in UI
+
 #### Logout Process
 1. **Token Cleanup**
    - Remove JWT token from cookies
+   - Remove active company cookie
    - Clear any client-side token storage
    - Redirect to login page
 
