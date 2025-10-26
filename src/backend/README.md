@@ -11,6 +11,7 @@ This directory contains all backend business logic following the layered archite
 ```
 src/backend/
 ├── authentication.ts  # Authentication, login, token management
+├── user.ts           # User repository - CRUD operations
 └── README.md         # This file
 ```
 
@@ -229,6 +230,166 @@ JWT tokens in AssetCore use **only standard JWT claims** with minimal user data:
 - ✅ No sensitive data in token
 - ✅ User changes take immediate effect
 - ✅ Revocation can be handled by checking user status in database
+
+## User Repository Module
+
+Location: `src/backend/user.ts`
+
+### Features
+
+- **User CRUD Operations**: Create, read, update, delete operations for users
+- **User-Company Associations**: Manage multi-tenant user-company relationships
+- **Query Functions**: Search, filter, and retrieve users by various criteria
+- **Type Safety**: Full TypeScript integration with Zod validation
+- **SQL Injection Prevention**: All queries use parameterized prepared statements
+
+### Core Functions
+
+#### User Operations
+
+##### `createUser(userData: CreateUser, passwordHash: string): Promise<User>`
+
+Create a new user. Password must be pre-hashed using bcrypt.
+
+```typescript
+import { createUser } from '@/backend/user';
+import bcrypt from 'bcrypt';
+
+const passwordHash = await bcrypt.hash('password123', 12);
+const user = await createUser({
+  email: 'new@example.com',
+  first_name: 'John',
+  last_name: 'Doe',
+  user_type: 'tenant',
+  system_role: null,
+}, passwordHash);
+```
+
+##### `getUserById(userId: string): Promise<User | null>`
+
+Get user by ID.
+
+```typescript
+import { getUserById } from '@/backend/user';
+
+const user = await getUserById(userId);
+```
+
+##### `getUserByEmail(email: string): Promise<User | null>`
+
+Get user by email address.
+
+```typescript
+import { getUserByEmail } from '@/backend/user';
+
+const user = await getUserByEmail('user@example.com');
+```
+
+##### `getUserWithCompanies(userId: string): Promise<UserWithCompanies | null>`
+
+Get user with all company associations.
+
+```typescript
+import { getUserWithCompanies } from '@/backend/user';
+
+const user = await getUserWithCompanies(userId);
+// Returns user with companies array
+```
+
+##### `updateUser(userId: string, userData: UpdateUser): Promise<User>`
+
+Update user details.
+
+```typescript
+import { updateUser } from '@/backend/user';
+
+const updatedUser = await updateUser(userId, {
+  first_name: 'Jane',
+  email: 'newemail@example.com',
+  is_active: true,
+});
+```
+
+##### `deleteUser(userId: string): Promise<boolean>`
+
+Soft delete user (sets is_active = false).
+
+```typescript
+import { deleteUser } from '@/backend/user';
+
+await deleteUser(userId);
+```
+
+##### `getUsersByCompany(companyId: string, includeInactive?: boolean): Promise<User[]>`
+
+Get all users associated with a company.
+
+```typescript
+import { getUsersByCompany } from '@/backend/user';
+
+const users = await getUsersByCompany(companyId);
+// Returns array of users for the company
+```
+
+#### User-Company Association Operations
+
+##### `createUserCompany(userCompanyData: CreateUserCompany): Promise<UserCompany>`
+
+Associate user with a company.
+
+```typescript
+import { createUserCompany } from '@/backend/user';
+
+const userCompany = await createUserCompany({
+  user_id: userId,
+  company_id: companyId,
+  role: 'company_admin',
+  is_primary: true,
+});
+```
+
+##### `getUserCompaniesByUserId(userId: string, includeInactive?: boolean): Promise<UserCompany[]>`
+
+Get all company associations for a user.
+
+```typescript
+import { getUserCompaniesByUserId } from '@/backend/user';
+
+const companies = await getUserCompaniesByUserId(userId);
+```
+
+##### `updateUserCompany(associationId: string, userCompanyData: UpdateUserCompany): Promise<UserCompany>`
+
+Update user-company association (role, permissions, etc.).
+
+```typescript
+import { updateUserCompany } from '@/backend/user';
+
+const updated = await updateUserCompany(associationId, {
+  role: 'asset_manager',
+  is_active: true,
+});
+```
+
+##### `setPrimaryCompany(userId: string, companyId: string): Promise<UserCompany>`
+
+Set the primary company for a user.
+
+```typescript
+import { setPrimaryCompany } from '@/backend/user';
+
+await setPrimaryCompany(userId, companyId);
+```
+
+##### `removeUserFromCompany(associationId: string): Promise<boolean>`
+
+Remove user from company (soft delete).
+
+```typescript
+import { removeUserFromCompany } from '@/backend/user';
+
+await removeUserFromCompany(associationId);
+```
 
 ## Architecture Principles
 

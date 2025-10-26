@@ -16,8 +16,13 @@ import jwt from 'jsonwebtoken';
 import { v4 as uuidv4 } from 'uuid';
 import { db } from '@/lib/db';
 import { loginSchema, createUserSchema } from '@/lib/validators/user';
-import type { User, UserCompany, CreateUser, Login } from '@/lib/validators/user';
-import type { UserWithCompanies } from '@/types/user';
+import type { User, CreateUser, Login } from '@/lib/validators/user';
+import { 
+  getUserByEmail,
+  getUserById,
+  getUserWithCompanies,
+  updateLastLogin 
+} from '@/backend/user';
 
 /**
  * JWT configuration
@@ -67,7 +72,7 @@ export async function login(credentials: Login): Promise<AuthResponse> {
   const validatedCredentials = loginSchema.parse(credentials);
   
   // Find user by email
-  const user = await findUserByEmail(validatedCredentials.email);
+  const user = await getUserByEmail(validatedCredentials.email);
   
   if (!user) {
     throw new Error('Invalid email or password');
@@ -133,7 +138,7 @@ export async function refreshToken(refreshToken: string): Promise<RefreshTokenRe
     }
     
     // Get user from database
-    const user = await findUserById(userId);
+    const user = await getUserById(userId);
     
     if (!user) {
       throw new Error('User not found');
@@ -234,7 +239,7 @@ export async function register(userData: CreateUser): Promise<User> {
   const validatedData = createUserSchema.parse(userData);
   
   // Check if email already exists
-  const existingUser = await findUserByEmail(validatedData.email);
+  const existingUser = await getUserByEmail(validatedData.email);
   
   if (existingUser) {
     throw new Error('Email already registered');
@@ -305,7 +310,7 @@ export async function changePassword(
   newPassword: string
 ): Promise<void> {
   // Get user
-  const user = await findUserById(userId);
+  const user = await getUserById(userId);
   
   if (!user) {
     throw new Error('User not found');
@@ -340,7 +345,7 @@ export async function changePassword(
  */
 export async function resetPassword(email: string, newPassword: string): Promise<void> {
   // Find user by email
-  const user = await findUserByEmail(email);
+  const user = await getUserByEmail(email);
   
   if (!user) {
     throw new Error('User not found');
@@ -359,86 +364,10 @@ export async function resetPassword(email: string, newPassword: string): Promise
   await db.execute(query, [passwordHash, new Date(), user.id]);
 }
 
-/**
- * Get user by ID with company associations
- * 
- * @param userId - User ID
- * @param includeCompanies - Whether to include company associations
- * @returns User with optional company associations
- */
-export async function getUserById(
-  userId: string,
-  includeCompanies = false
-): Promise<User | UserWithCompanies | null> {
-  const query = `
-    SELECT * FROM users WHERE id = ?
-  `;
-  
-  const user = await db.queryOne<User>(query, [userId]);
-  
-  if (!user) {
-    return null;
-  }
-  
-  if (includeCompanies) {
-    const companies = await getUserCompanies(userId);
-    const userWithCompanies: UserWithCompanies = { ...user, companies };
-    return userWithCompanies;
-  }
-  
-  return user;
-}
-
-/**
- * Get user companies
- * 
- * @param userId - User ID
- * @returns Array of UserCompany associations
- */
-export async function getUserCompanies(userId: string): Promise<UserCompany[]> {
-  const query = `
-    SELECT uc.*, c.name as company_name, c.slug as company_slug
-    FROM user_companies uc
-    JOIN companies c ON uc.company_id = c.id
-    WHERE uc.user_id = ? AND uc.is_active = true AND c.is_active = true
-    ORDER BY uc.is_primary DESC, uc.joined_at ASC
-  `;
-  
-  const companies = await db.execute<UserCompany>(query, [userId]);
-  return companies[0];
-}
 
 // ==========================================
 // Helper Functions
 // ==========================================
-
-/**
- * Find user by email
- * 
- * @param email - User email
- * @returns User or null
- */
-async function findUserByEmail(email: string): Promise<User | null> {
-  const query = `
-    SELECT * FROM users WHERE email = ?
-  `;
-  
-  return await db.queryOne<User>(query, [email]);
-}
-
-/**
- * Find user by ID
- * 
- * @param userId - User ID
- * @returns User or null
- */
-async function findUserById(userId: string): Promise<User | null> {
-  const query = `
-    SELECT * FROM users WHERE id = ?
-  `;
-  
-  return await db.queryOne<User>(query, [userId]);
-}
 
 /**
  * Hash password using bcrypt
@@ -487,21 +416,6 @@ function generateRefreshToken(data: Record<string, unknown>): string {
     issuer: 'assetcore',
     audience: 'assetcore-client',
   } as jwt.SignOptions);
-}
-
-/**
- * Update user last login timestamp
- * 
- * @param userId - User ID
- */
-async function updateLastLogin(userId: string): Promise<void> {
-  const query = `
-    UPDATE users
-    SET last_login = ?
-    WHERE id = ?
-  `;
-  
-  await db.execute(query, [new Date(), userId]);
 }
 
 /**
@@ -570,14 +484,11 @@ export const authUtils = {
     }
     
     // Fetch full user details from database
-    const user = await getUserById(userId, true);
+    const user = await getUserWithCompanies(userId);
     
     if (!user) {
       throw new Error('User not found');
     }
-    
-    // Check if user has companies
-    const hasCompanies = 'companies' in user && user.companies;
     
     return {
       user,
@@ -585,7 +496,7 @@ export const authUtils = {
       email: user.email,
       userType: user.user_type,
       systemRole: user.user_type === 'system_admin' ? user.system_role : null,
-      companies: hasCompanies ? (user as UserWithCompanies).companies || [] : [],
+      companies: user.companies || [],
     };
   },
 };

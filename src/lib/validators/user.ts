@@ -114,20 +114,3 @@ export interface UserWithCompanies extends User {
   companies?: UserCompany[];
 }
 
-// Type guard functions
-export function isSystemAdmin(user: User): boolean {
-  return user.user_type === 'system_admin';
-}
-
-export function isTenantUser(user: User): boolean {
-  return user.user_type === 'tenant';
-}
-
-export function isSuperAdmin(user: User): boolean {
-  return user.user_type === 'system_admin' && user.system_role === 'super_admin';
-}
-
-export function isSupportAdmin(user: User): boolean {
-  return user.user_type === 'system_admin' && user.system_role === 'support_admin';
-}
-
