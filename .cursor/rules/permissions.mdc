@@ -375,6 +375,23 @@ export function getEntityPermissions(userPermissions: string[], entity: string):
     .map(permission => permission.split(':')[1])
     .filter(action => action !== '*');
 }
+
+// System Administrator Role Checking Functions
+export function isSystemAdmin(userType: string, systemRole?: string | null): boolean {
+  return userType === 'system_admin';
+}
+
+export function isSuperAdmin(userType: string, systemRole?: string | null): boolean {
+  return userType === 'system_admin' && systemRole === 'super_admin';
+}
+
+export function isSupportAdmin(userType: string, systemRole?: string | null): boolean {
+  return userType === 'system_admin' && systemRole === 'support_admin';
+}
+
+export function hasSystemRole(user: { user_type: string; system_role?: string | null }, role: 'super_admin' | 'support_admin'): boolean {
+  return user.user_type === 'system_admin' && user.system_role === role;
+}
 ```
 
 #### API Endpoint Protection
@@ -454,6 +471,19 @@ export function checkAssetAccess(userId: string, assetId: string, action: string
   const requiredPermission = `assets:${action}`;
   return hasPermission(user.permissions, requiredPermission);
 }
+
+// System administrator access control
+export function requireSuperAdmin(user: { user_type: string; system_role?: string | null }) {
+  if (!isSuperAdmin(user.user_type, user.system_role)) {
+    throw new Error('Super Administrator access required');
+  }
+}
+
+export function requireSupportAdminOrHigher(user: { user_type: string; system_role?: string | null }) {
+  if (!isSystemAdmin(user.user_type, user.system_role)) {
+    throw new Error('System Administrator access required');
+  }
+}
 ```
 
 #### Multi-Company Access Control
@@ -469,7 +499,9 @@ export function enforceMultiCompanyAccess(
   const requestedCompanyId = req.params.companyId || req.body.companyId;
 
   // System administrators can access all tenant data
+  // Support admins have read-only, Super admins have full access
   if (user.user_type === "system_admin") {
+    req.systemRole = user.system_role; // 'super_admin' or 'support_admin'
     return next();
   }
 

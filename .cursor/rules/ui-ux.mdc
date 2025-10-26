@@ -1,0 +1,750 @@
+---
+title: UI/UX Design Guide
+description: Comprehensive design system, interaction patterns, and user experience standards for AssetCore
+alwaysApply: true
+---
+
+# UI/UX Design Guide
+
+## Overview
+
+AssetCore's design system prioritizes clarity, efficiency, and accessibility for asset management professionals. This guide establishes visual design principles, interaction patterns, and user experience standards that complement the shadcn/ui component library to create a cohesive, professional interface.
+
+### Design Philosophy
+
+**Core Principles:**
+
+1. **Clarity First**: Information hierarchy prioritizes critical data and actions
+2. **Efficient Workflows**: Streamlined interfaces reduce cognitive load and task completion time
+3. **Professional Aesthetics**: Clean, modern design builds trust for enterprise users
+4. **Accessibility Universal**: WCAG 2.1 AA compliance ensures usability for all users
+5. **Consistency**: Unified patterns across all pages and features
+
+### Target Users
+
+- **Maintenance Technicians**: Field work, mobile-first interactions, quick task completion
+- **Asset Managers**: Data-dense dashboards, analytical insights, planning tools
+- **Operations Supervisors**: Real-time monitoring, performance metrics, executive reporting
+- **System Administrators**: Configuration interfaces, multi-tenant management, system controls
+
+## Visual Design System
+
+### Color Palette
+
+AssetCore uses a carefully curated color system with semantic meanings for different contexts:
+
+**Primary Colors:**
+- **Slate Base**: Neutral foundation for backgrounds and containers
+- **Blue Primary**: Brand identity, primary actions, informational elements
+- **Green Success**: Positive states, completion indicators, operational assets
+- **Orange Warning**: Attention required, caution states, pending maintenance
+- **Red Error**: Critical issues, destructive actions, failed states
+
+**Semantic Color Usage:**
+
+```typescript
+// Status-based color mapping
+const statusColors = {
+  // Asset Status
+  operational: { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200' },
+  maintenance: { bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-200' },
+  inactive: { bg: 'bg-gray-50', text: 'text-gray-700', border: 'border-gray-200' },
+  
+  // Priority Levels
+  low: 'text-blue-600',
+  medium: 'text-yellow-600',
+  high: 'text-orange-600',
+  critical: 'text-red-600',
+  
+  // Data Health
+  success: 'text-green-600',
+  warning: 'text-yellow-600',
+  error: 'text-red-600',
+};
+```
+
+### Typography
+
+**Font System:**
+- **Primary Font**: Inter (sans-serif) - Modern, highly legible
+- **Monospace Font**: JetBrains Mono - Code, IDs, technical data
+
+**Type Scale:**
+
+```css
+/* Typography Scale */
+.text-xs { font-size: 0.75rem; line-height: 1rem; }      /* 12px - Helper text */
+.text-sm { font-size: 0.875rem; line-height: 1.25rem; } /* 14px - Body small */
+.text-base { font-size: 1rem; line-height: 1.5rem; }     /* 16px - Body text */
+.text-lg { font-size: 1.125rem; line-height: 1.75rem; }  /* 18px - Headings */
+.text-xl { font-size: 1.25rem; line-height: 1.75rem; }   /* 20px - Section titles */
+.text-2xl { font-size: 1.5rem; line-height: 2rem; }      /* 24px - Page titles */
+.text-3xl { font-size: 1.875rem; line-height: 2.25rem; }  /* 30px - Hero headings */
+```
+
+**Usage Guidelines:**
+
+- **Headings**: Bold (700 weight) for hierarchy, semibold (600) for emphasis
+- **Body Text**: Regular weight (400) for readability
+- **Labels**: Medium weight (500) for form labels and metadata
+- **Monospace**: Reserved for asset codes, IDs, technical identifiers
+
+### Spacing System
+
+**Consistent Spacing Scale:**
+
+```css
+/* Spacing Scale (Tailwind-based) */
+.space-1 { gap: 0.25rem; }   /* 4px - Tight grouping */
+.space-2 { gap: 0.5rem; }    /* 8px - Related elements */
+.space-3 { gap: 0.75rem; }    /* 12px - Default spacing */
+.space-4 { gap: 1rem; }      /* 16px - Section separation */
+.space-6 { gap: 1.5rem; }    /* 24px - Major sections */
+.space-8 { gap: 2rem; }      /* 32px - Layout sections */
+```
+
+**Container Spacing:**
+
+- **Component Padding**: 1rem (16px) for cards, modals, panels
+- **Section Spacing**: 1.5rem (24px) between major sections
+- **Page Margins**: 2rem (32px) on desktop, 1rem on mobile
+- **Grid Gaps**: 1rem for lists and grids
+
+### Layout Patterns
+
+#### Page Structure
+
+```
+┌──────────────────────────────────────────┐
+│ Header (64px height)                     │
+│ - Logo, Navigation, User Menu            │
+├──────────────────────────────────────────┤
+│ Main Content Area                        │
+│ ┌──────────────────┬───────────────────┐ │
+│ │ Sidebar (256px)  │ Content (flex)    │ │
+│ │ - Navigation     │                   │ │
+│ │ - Filters        │                   │ │
+│ └──────────────────┴───────────────────┘ │
+└──────────────────────────────────────────┘
+```
+
+#### Responsive Breakpoints
+
+```typescript
+// Breakpoint system (Tailwind)
+const breakpoints = {
+  sm: '640px',   // Mobile landscape
+  md: '768px',   // Tablet portrait
+  lg: '1024px',  // Tablet landscape
+  xl: '1280px',  // Desktop
+  '2xl': '1536px' // Large desktop
+};
+
+// Usage in components
+<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+  {/* Responsive grid layout */}
+</div>
+```
+
+#### Grid Systems
+
+**Dashboard Grid:**
+```typescript
+// 12-column grid with responsive breakpoints
+<div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+  <Card className="col-span-1">Widget 1</Card>
+  <Card className="col-span-1">Widget 2</Card>
+  <Card className="col-span-1 md:col-span-2 xl:col-span-1">Widget 3</Card>
+</div>
+```
+
+## Interaction Patterns
+
+### Loading States
+
+**Skeleton Loaders:**
+```typescript
+// ✅ CORRECT: Consistent skeleton pattern
+export function AssetSkeleton() {
+  return (
+    <Card className="w-full">
+      <CardHeader>
+        <Skeleton className="h-6 w-1/4" /> {/* Title */}
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-3">
+          <Skeleton className="h-4 w-full" />  {/* Content line */}
+          <Skeleton className="h-4 w-3/4" />   {/* Content line */}
+          <Skeleton className="h-4 w-1/2" />   {/* Content line */}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+```
+
+**Progressive Loading:**
+```typescript
+// ✅ CORRECT: Show critical data first, load details progressively
+export function AssetDetailPage() {
+  const { data: asset, isLoading } = useQuery(['asset', id]);
+  
+  if (isLoading) return <AssetDetailSkeleton />;
+  
+  return (
+    <div>
+      {/* Critical info loads first */}
+      <AssetHeader asset={asset} />
+      
+      {/* Secondary data loads progressively */}
+      <Suspense fallback={<ComponentListSkeleton />}>
+        <ComponentList assetId={asset.id} />
+      </Suspense>
+    </div>
+  );
+}
+```
+
+### Empty States
+
+**Empty State Patterns:**
+```typescript
+// ✅ CORRECT: Helpful empty states with actionable guidance
+
+export function EmptyAssetState() {
+  return (
+    <div className="flex flex-col items-center justify-center py-12">
+      <div className="rounded-full bg-muted p-3 mb-4">
+        <Package className="h-6 w-6 text-muted-foreground" />
+      </div>
+      <h3 className="text-lg font-semibold mb-2">No assets found</h3>
+      <p className="text-sm text-muted-foreground mb-6 text-center max-w-sm">
+        Get started by creating your first asset to track and manage.
+      </p>
+      <Button>
+        <Plus className="h-4 w-4 mr-2" />
+        Create Asset
+      </Button>
+    </div>
+  );
+}
+```
+
+### Error States
+
+**Error Handling Patterns:**
+```typescript
+// ✅ CORRECT: User-friendly error messages with recovery options
+
+export function ErrorState({ error, onRetry }: ErrorStateProps) {
+  return (
+    <div className="flex flex-col items-center justify-center py-12">
+      <AlertCircle className="h-12 w-12 text-destructive mb-4" />
+      <h3 className="text-lg font-semibold mb-2">Something went wrong</h3>
+      <p className="text-sm text-muted-foreground mb-6 text-center max-w-sm">
+        {error.message || 'Unable to load assets. Please try again.'}
+      </p>
+      <div className="flex gap-2">
+        <Button variant="outline" onClick={() => window.location.reload()}>
+          Refresh Page
+        </Button>
+        {onRetry && (
+          <Button onClick={onRetry}>
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Try Again
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+}
+```
+
+### Feedback Mechanisms
+
+**Toast Notifications:**
+```typescript
+// ✅ CORRECT: Contextual toast notifications
+
+// Success feedback
+toast({
+  title: "Asset created",
+  description: "The asset has been successfully registered.",
+  duration: 3000,
+});
+
+// Error feedback with actionable information
+toast({
+  variant: "destructive",
+  title: "Upload failed",
+  description: "File size exceeds 10MB limit. Please use a smaller file.",
+  duration: 5000,
+  action: (
+    <Button variant="outline" size="sm" onClick={handleHelp}>
+      Learn More
+    </Button>
+  ),
+});
+```
+
+## User Experience Patterns
+
+### Navigation Patterns
+
+**Breadcrumb Navigation:**
+```typescript
+// ✅ CORRECT: Clear hierarchical navigation
+export function AssetBreadcrumb() {
+  return (
+    <Breadcrumb>
+      <BreadcrumbList>
+        <BreadcrumbItem>
+          <BreadcrumbLink href="/dashboard">Dashboard</BreadcrumbLink>
+        </BreadcrumbItem>
+        <BreadcrumbSeparator />
+        <BreadcrumbItem>
+          <BreadcrumbLink href="/assets">Assets</BreadcrumbLink>
+        </BreadcrumbItem>
+        <BreadcrumbSeparator />
+        <BreadcrumbItem>
+          <BreadcrumbPage>Asset Detail</BreadcrumbPage>
+        </BreadcrumbItem>
+      </BreadcrumbList>
+    </Breadcrumb>
+  );
+}
+```
+
+### Search & Filtering
+
+**Advanced Search Pattern:**
+```typescript
+// ✅ CORRECT: Intuitive search with filter integration
+export function AssetSearchBar() {
+  const [query, setQuery] = useState('');
+  const [showFilters, setShowFilters] = useState(false);
+  
+  return (
+    <div className="space-y-4">
+      <div className="flex gap-2">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search assets by code, type, or model..."
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+        <Button
+          variant="outline"
+          onClick={() => setShowFilters(!showFilters)}
+        >
+          <Filter className="h-4 w-4 mr-2" />
+          Filters
+        </Button>
+      </div>
+      
+      {showFilters && (
+        <Card>
+          <CardContent className="pt-6">
+            {/* Advanced filters */}
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
+```
+
+### Form Patterns
+
+**Multi-Step Forms:**
+```typescript
+// ✅ CORRECT: Progressive form disclosure
+export function AssetFormWizard() {
+  const [step, setStep] = useState(1);
+  const steps = ['Basic Info', 'Specifications', 'Location', 'Review'];
+  
+  return (
+    <div className="space-y-6">
+      {/* Progress indicator */}
+      <div className="flex items-center">
+        {steps.map((label, index) => (
+          <Fragment key={index}>
+            <div className={cn(
+              "flex items-center",
+              index < step ? "text-primary" : "text-muted-foreground"
+            )}>
+              <div className={cn(
+                "flex h-8 w-8 items-center justify-center rounded-full border-2",
+                index < step ? "border-primary bg-primary text-white" : ""
+              )}>
+                {index + 1}
+              </div>
+              <span className="ml-2">{label}</span>
+            </div>
+            {index < steps.length - 1 && <Separator className="mx-4 w-12" />}
+          </Fragment>
+        ))}
+      </div>
+      
+      {/* Form content based on step */}
+      {/* Navigation buttons */}
+    </div>
+  );
+}
+```
+
+### Data Display Patterns
+
+**Card-Based Layouts:**
+```typescript
+// ✅ CORRECT: Information-dense cards for asset lists
+export function AssetCard({ asset }: { asset: Asset }) {
+  return (
+    <Card className="hover:shadow-md transition-shadow">
+      <CardHeader className="pb-3">
+        <div className="flex items-start justify-between">
+          <CardTitle className="text-lg">{asset.assetCode}</CardTitle>
+          <Badge variant={getStatusVariant(asset.status)}>
+            {asset.status}
+          </Badge>
+        </div>
+        <CardDescription>{asset.type}</CardDescription>
+      </CardHeader>
+      
+      <CardContent>
+        <dl className="space-y-2 text-sm">
+          <div className="flex justify-between">
+            <dt className="text-muted-foreground">Model:</dt>
+            <dd className="font-medium">{asset.model}</dd>
+          </div>
+          <div className="flex justify-between">
+            <dt className="text-muted-foreground">Location:</dt>
+            <dd className="font-medium">{asset.location?.name}</dd>
+          </div>
+          <div className="flex justify-between">
+            <dt className="text-muted-foreground">Components:</dt>
+            <dd className="font-medium">{asset.components?.length || 0}</dd>
+          </div>
+        </dl>
+      </CardContent>
+      
+      <CardFooter className="flex gap-2 pt-3">
+        <Button variant="outline" size="sm" className="flex-1">
+          View
+        </Button>
+        <Button variant="default" size="sm" className="flex-1">
+          Edit
+        </Button>
+      </CardFooter>
+    </Card>
+  );
+}
+```
+
+## Mobile Experience
+
+### Responsive Design Principles
+
+**Mobile-First Approach:**
+```typescript
+// ✅ CORRECT: Mobile-optimized layouts
+export function ResponsiveAssetList({ assets }: { assets: Asset[] }) {
+  return (
+    <>
+      {/* Desktop: Table view */}
+      <div className="hidden lg:block">
+        <AssetsTable assets={assets} />
+      </div>
+      
+      {/* Mobile: Card view */}
+      <div className="grid grid-cols-1 gap-4 lg:hidden">
+        {assets.map(asset => (
+          <AssetCard key={asset.id} asset={asset} />
+        ))}
+      </div>
+    </>
+  );
+}
+```
+
+**Touch Target Sizes:**
+- Minimum: 44x44px (iOS guidelines)
+- Comfortable: 48x48px for important actions
+- Spacing: 8px minimum between touch targets
+
+**Mobile Navigation:**
+```typescript
+// ✅ CORRECT: Mobile-friendly navigation
+export function MobileNavigation() {
+  return (
+    <Sheet>
+      <SheetTrigger asChild>
+        <Button variant="ghost" size="icon" className="lg:hidden">
+          <Menu className="h-6 w-6" />
+        </Button>
+      </SheetTrigger>
+      <SheetContent side="left" className="w-64">
+        <nav className="space-y-1">
+          <NavigationLink href="/dashboard">
+            <LayoutDashboard className="h-4 w-4" />
+            Dashboard
+          </NavigationLink>
+          <NavigationLink href="/assets">
+            <Package className="h-4 w-4" />
+            Assets
+          </NavigationLink>
+          {/* More nav items */}
+        </nav>
+      </SheetContent>
+    </Sheet>
+  );
+}
+```
+
+## Accessibility Standards
+
+### WCAG 2.1 AA Compliance
+
+**Color Contrast:**
+- Normal text: 4.5:1 minimum ratio
+- Large text: 3:1 minimum ratio
+- Interactive elements: 3:1 for visual boundaries
+
+**Keyboard Navigation:**
+- All interactive elements accessible via keyboard
+- Logical tab order throughout the application
+- Skip links for main content areas
+- Focus indicators clearly visible (2px outline)
+
+**Screen Reader Support:**
+```typescript
+// ✅ CORRECT: Accessible labels and descriptions
+<Button
+  aria-label="Delete asset AC-001"
+  onClick={handleDelete}
+>
+  <Trash2 className="h-4 w-4" aria-hidden="true" />
+</Button>
+
+<Card aria-labelledby="asset-details-heading">
+  <CardHeader>
+    <CardTitle id="asset-details-heading">Asset Details</CardTitle>
+  </CardHeader>
+  <CardContent>
+    {/* Content */}
+  </CardContent>
+</Card>
+```
+
+**Focus Management:**
+```typescript
+// ✅ CORRECT: Proper focus trapping in modals
+export function AssetDialog({ children }: { children: React.ReactNode }) {
+  return (
+    <Dialog>
+      <DialogContent className="max-w-2xl">
+        {/* Focus automatically managed by shadcn/ui Dialog */}
+        {children}
+      </DialogContent>
+    </Dialog>
+  );
+}
+```
+
+## Animation & Micro-interactions
+
+### Transitions
+
+**Timing Functions:**
+```css
+/* Smooth transitions for interactive elements */
+.transition-default {
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+.transition-slow {
+  transition-duration: 300ms;
+}
+```
+
+**Hover Effects:**
+```typescript
+// ✅ CORRECT: Subtle hover feedback
+<Card className="transition-all hover:shadow-lg hover:-translate-y-1">
+  <CardContent>
+    {/* Content */}
+  </CardContent>
+</Card>
+```
+
+**Loading Animations:**
+```typescript
+// ✅ CORRECT: Smooth loading states
+export function AsyncButton({ onClick, children }: ButtonProps) {
+  const [isLoading, setIsLoading] = useState(false);
+  
+  return (
+    <Button
+      onClick={async () => {
+        setIsLoading(true);
+        await onClick();
+        setIsLoading(false);
+      }}
+      disabled={isLoading}
+    >
+      {isLoading ? (
+        <>
+          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+          Loading...
+        </>
+      ) : (
+        children
+      )}
+    </Button>
+  );
+}
+```
+
+## Design Tokens
+
+### CSS Variables
+
+```css
+/* Design tokens (defined in globals.css) */
+:root {
+  /* Colors */
+  --background: 0 0% 100%;
+  --foreground: 222.2 84% 4.9%;
+  --primary: 221.2 83.2% 53.3%;
+  --primary-foreground: 210 40% 98%;
+  
+  /* Spacing */
+  --radius: 0.5rem;
+  
+  /* Typography */
+  --font-sans: 'Inter', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+```
+
+## Design Workflow
+
+### Design-to-Development Handoff
+
+1. **Design Review**: Design specifications reviewed for feasibility
+2. **Token Mapping**: Design tokens mapped to CSS variables
+3. **Component Implementation**: Using shadcn/ui + custom styling
+4. **Accessibility Audit**: Automated and manual testing
+5. **Responsive Testing**: Verified across breakpoints and devices
+
+### Quality Assurance
+
+**Design QA Checklist:**
+- [ ] Visual consistency with design system
+- [ ] Responsive behavior verified
+- [ ] Accessibility requirements met
+- [ ] Performance targets achieved
+- [ ] Cross-browser compatibility confirmed
+- [ ] Mobile experience optimized
+
+## Best Practices
+
+### Visual Hierarchy
+
+```typescript
+// ✅ CORRECT: Clear visual hierarchy
+<div className="space-y-6">
+  <div>
+    <h1 className="text-3xl font-bold">Page Title</h1>
+    <p className="text-muted-foreground">Descriptive subtitle</p>
+  </div>
+  
+  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+    {/* Key metrics prominently displayed */}
+  </div>
+  
+  <Card>
+    <CardHeader>
+      <CardTitle>Section Title</CardTitle>
+      <CardDescription>Section description</CardDescription>
+    </CardHeader>
+    <CardContent>
+      {/* Content */}
+    </CardContent>
+  </Card>
+</div>
+```
+
+### Content Organization
+
+**Information Architecture:**
+- **Primary Actions**: Always visible, prominent placement
+- **Secondary Actions**: Accessible via menus or separate pages
+- **Related Information**: Grouped logically with clear visual connections
+- **Critical Data**: Highlighted with color, size, or position
+
+### Progressive Disclosure
+
+```typescript
+// ✅ CORRECT: Show summary, allow detail expansion
+export function AssetSummaryCard({ asset }: { asset: Asset }) {
+  const [showDetails, setShowDetails] = useState(false);
+  
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-start justify-between">
+          <div>
+            <CardTitle>{asset.assetCode}</CardTitle>
+            <CardDescription>{asset.type}</CardDescription>
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setShowDetails(!showDetails)}
+          >
+            {showDetails ? <ChevronUp /> : <ChevronDown />}
+          </Button>
+        </div>
+      </CardHeader>
+      
+      {showDetails && (
+        <CardContent>
+          {/* Additional details */}
+        </CardContent>
+      )}
+    </Card>
+  );
+}
+```
+
+## Summary
+
+### Design Principles Summary
+
+1. **Clarity Over Cleverness**: Prioritize clear communication over decorative elements
+2. **Consistency Across Contexts**: Maintain design system across all features
+3. **Efficiency for Experts**: Optimize for power users while remaining accessible
+4. **Mobile Excellence**: Ensure mobile experience matches desktop quality
+5. **Accessibility First**: Design for all users from the beginning
+
+### Component Integration
+
+- Use shadcn/ui components as the foundation
+- Apply AssetCore design tokens for consistency
+- Follow established patterns for similar contexts
+- Maintain accessibility standards throughout
+- Test responsive behavior across all breakpoints
+
+### Success Metrics
+
+- **Task Completion Time**: Reduce average task time by 40%
+- **User Satisfaction**: Achieve 4.5+/5 rating
+- **Error Rate**: Reduce user errors by 50%
+- **Accessibility Score**: Maintain 95+ Lighthouse accessibility score
+- **Mobile Usability**: 90+ mobile usability score
+

@@ -48,22 +48,24 @@ AssetCore implements a comprehensive database schema designed for multi-tenant a
 
 **Purpose:** System users with role-based access control supporting both tenant-specific users and platform-wide system administrators.
 
-| Field           | Type         | Description                                  | Constraints      |
-| --------------- | ------------ | -------------------------------------------- | ---------------- |
-| `id`            | UUID         | Primary key                                  | NOT NULL, UNIQUE |
-| `user_type`     | VARCHAR(20)  | User type: 'tenant' or 'system_admin'        | NOT NULL         |
-| `email`         | VARCHAR(255) | User email address                           | NOT NULL, UNIQUE |
-| `first_name`    | VARCHAR(100) | User's first name                            | NOT NULL         |
-| `last_name`     | VARCHAR(100) | User's last name                             | NOT NULL         |
-| `is_active`     | BOOLEAN      | Account status                               | DEFAULT true     |
-| `last_login`    | TIMESTAMP    | Last login timestamp                         | NULLABLE         |
-| `password_hash` | VARCHAR(255) | Hashed password for authentication           | NOT NULL         |
-| `created_at`    | TIMESTAMP    | Creation timestamp                           | NOT NULL         |
-| `updated_at`    | TIMESTAMP    | Last update timestamp                        | NOT NULL         |
+| Field           | Type         | Description                           | Constraints      |
+| --------------- | ------------ | ------------------------------------- | ---------------- |
+| `id`            | UUID         | Primary key                           | NOT NULL, UNIQUE |
+| `user_type`     | VARCHAR(20)  | User type: 'tenant' or 'system_admin' | NOT NULL         |
+| `system_role`   | VARCHAR(50)  | System role (only for system_admin)  | NULLABLE         |
+| `email`         | VARCHAR(255) | User email address                    | NOT NULL, UNIQUE |
+| `first_name`    | VARCHAR(100) | User's first name                     | NOT NULL         |
+| `last_name`     | VARCHAR(100) | User's last name                      | NOT NULL         |
+| `is_active`     | BOOLEAN      | Account status                        | DEFAULT true     |
+| `last_login`    | TIMESTAMP    | Last login timestamp                  | NULLABLE         |
+| `password_hash` | VARCHAR(255) | Hashed password for authentication    | NOT NULL         |
+| `created_at`    | TIMESTAMP    | Creation timestamp                    | NOT NULL         |
+| `updated_at`    | TIMESTAMP    | Last update timestamp                 | NOT NULL         |
 
 **Key Features:**
 
 - **Dual User Types**: Supports both tenant users and system administrators
+- **System Roles**: For system administrators, the `system_role` field distinguishes between 'Super Administrator' and 'Support Administrator'
 - **Multi-Company Support**: Users can be associated with multiple companies via UserCompany
 - **Security Features**: Password hashing and login tracking
 - **Soft Delete**: Account deactivation with is_active flag
@@ -80,25 +82,31 @@ AssetCore implements a comprehensive database schema designed for multi-tenant a
 
 #### System Administrators (no company associations)
 
+System administrators are identified by `user_type = 'system_admin'` and differentiated by the `system_role` field:
+
 - **Super Administrator**: Platform-wide management and configuration
+  - `system_role = 'super_admin'` (or 'Super Administrators')
+  - Full access to all platform features and tenant data
 - **Support Administrator**: Technical support and user assistance
+  - `system_role = 'support_admin'` (or 'Support Administrator')
+  - Read-only access to tenant data for troubleshooting
 
 ### UserCompany
 
 **Purpose:** Many-to-many relationship between users and companies, storing role and permissions for each company association.
 
-| Field           | Type         | Description                                  | Constraints      |
-| --------------- | ------------ | -------------------------------------------- | ---------------- |
-| `id`            | UUID         | Primary key                                  | NOT NULL, UNIQUE |
-| `user_id`       | UUID         | Foreign key to User                          | NOT NULL, FK     |
-| `company_id`    | UUID         | Foreign key to Company                       | NOT NULL, FK     |
-| `role`          | VARCHAR(50)  | User role within this company                | NOT NULL         |
-| `permissions`   | JSONB        | Company-specific permissions                 | DEFAULT '{}'     |
-| `is_active`     | BOOLEAN      | Association status                            | DEFAULT true     |
-| `is_primary`    | BOOLEAN      | Primary company for user                     | DEFAULT false    |
-| `joined_at`     | TIMESTAMP    | When user joined this company                | NOT NULL         |
-| `created_at`    | TIMESTAMP    | Creation timestamp                           | NOT NULL         |
-| `updated_at`    | TIMESTAMP    | Last update timestamp                        | NOT NULL         |
+| Field         | Type        | Description                   | Constraints      |
+| ------------- | ----------- | ----------------------------- | ---------------- |
+| `id`          | UUID        | Primary key                   | NOT NULL, UNIQUE |
+| `user_id`     | UUID        | Foreign key to User           | NOT NULL, FK     |
+| `company_id`  | UUID        | Foreign key to Company        | NOT NULL, FK     |
+| `role`        | VARCHAR(50) | User role within this company | NOT NULL         |
+| `permissions` | JSONB       | Company-specific permissions  | DEFAULT '{}'     |
+| `is_active`   | BOOLEAN     | Association status            | DEFAULT true     |
+| `is_primary`  | BOOLEAN     | Primary company for user      | DEFAULT false    |
+| `joined_at`   | TIMESTAMP   | When user joined this company | NOT NULL         |
+| `created_at`  | TIMESTAMP   | Creation timestamp            | NOT NULL         |
+| `updated_at`  | TIMESTAMP   | Last update timestamp         | NOT NULL         |
 
 **Key Features:**
 
@@ -113,6 +121,8 @@ AssetCore implements a comprehensive database schema designed for multi-tenant a
 
 - Each user can have only one primary company (`is_primary = true`)
 - System administrators (user_type = 'system_admin') have no UserCompany records
+- System administrators must have a `system_role` field value ('super_admin' or 'support_admin')
+- Tenant users (user_type = 'tenant') must have `system_role = NULL`
 - Tenant users (user_type = 'tenant') must have at least one UserCompany record
 - Users can have different roles and permissions in different companies
 
