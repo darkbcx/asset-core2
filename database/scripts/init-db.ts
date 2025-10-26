@@ -10,7 +10,13 @@
 import mysql from 'mysql2/promise';
 import fs from 'fs';
 import path from 'path';
-import readline from 'readline';
+import readline, { Interface } from 'readline';
+
+interface MutableInterface extends Interface {
+  stdoutMuted?: boolean;
+  _writeToOutput?: (char: string) => void;
+  output?: NodeJS.WritableStream;
+}
 
 // ANSI color codes
 const colors = {
@@ -46,7 +52,7 @@ function promptPassword(): Promise<string> {
     const rl = readline.createInterface({
       input: process.stdin,
       output: process.stdout,
-    });
+    }) as MutableInterface;
 
     rl.stdoutMuted = true;
     rl.question('Enter MySQL root password: ', (password: string) => {
@@ -56,11 +62,11 @@ function promptPassword(): Promise<string> {
     });
 
     // Mute password input
-    (rl as any)._writeToOutput = function (char: string) {
-      if ((rl as any).stdoutMuted) {
-        (rl as any).output.write('*');
-      } else {
-        (rl as any).output.write(char);
+    rl._writeToOutput = function (char: string) {
+      if (rl.stdoutMuted && rl.output) {
+        rl.output.write('*');
+      } else if (rl.output) {
+        rl.output.write(char);
       }
     };
   });
@@ -219,6 +225,7 @@ async function displaySummary(connection: mysql.Connection): Promise<void> {
     console.log('\n=== Database Summary ===');
     console.table(rows);
   } catch (error) {
+    console.error(error);
     log.warn('Could not display summary');
   }
 }

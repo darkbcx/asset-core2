@@ -6,10 +6,9 @@
  * Helper script for database operations like migrate, seed, reset, backup, etc.
  */
 
-import mysql from 'mysql2/promise';
+import mysql, { ConnectionOptions, RowDataPacket } from 'mysql2/promise';
 import fs from 'fs';
 import path from 'path';
-import readline from 'readline';
 import { execSync } from 'child_process';
 
 // ANSI color codes
@@ -44,7 +43,7 @@ const log = {
  * Get MySQL connection
  */
 async function getConnection(useDatabase = false): Promise<mysql.Connection> {
-  const connectionConfig: any = {
+  const connectionConfig: ConnectionOptions = {
     host: config.host,
     port: config.port,
     user: config.user,
@@ -195,7 +194,7 @@ async function status(): Promise<void> {
   log.info('Database Status\n');
   
   try {
-    const [tables] = await connection.query<any[]>(
+    const [tables] = await connection.query<(RowDataPacket & { TABLE_NAME: string; TABLE_ROWS: number })[]>(
       "SELECT TABLE_NAME, TABLE_ROWS FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = ?",
       [config.database]
     );
@@ -205,7 +204,7 @@ async function status(): Promise<void> {
       Rows: t.TABLE_ROWS || 0,
     })));
 
-    const [summary] = await connection.query<any[]>(`
+    const [summary] = await connection.query<(RowDataPacket & { table_name: string; records: number })[]>(`
       SELECT 
         'Companies' as table_name, COUNT(*) as records FROM companies
       UNION ALL
@@ -221,6 +220,7 @@ async function status(): Promise<void> {
     console.log('\n=== Summary ===');
     console.table(summary);
   } catch (error) {
+    console.error(error);
     log.error('Could not get database status');
   }
   
