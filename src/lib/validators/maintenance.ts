@@ -6,6 +6,9 @@
 
 import { z } from 'zod';
 
+// Maintenance type schema
+export const maintenanceTypeSchema = z.enum(['scheduled', 'on_demand']);
+
 // Maintenance priority schema
 export const maintenancePrioritySchema = z.enum(['low', 'medium', 'high', 'critical']);
 
@@ -26,6 +29,7 @@ export const maintenanceRecordSchema = z.object({
   assigned_technician_id: z.string().uuid().nullable(),
   title: z.string().min(1).max(255),
   description: z.string().nullable(),
+  maintenance_type: maintenanceTypeSchema,
   priority: maintenancePrioritySchema,
   status: maintenanceStatusSchema,
   reported_date: z.date(),
@@ -48,6 +52,7 @@ export const createMaintenanceRecordSchema = z.object({
   assigned_technician_id: z.string().uuid().nullable().optional(),
   title: z.string().min(1).max(255),
   description: z.string().nullable().optional(),
+  maintenance_type: maintenanceTypeSchema,
   priority: maintenancePrioritySchema,
   status: maintenanceStatusSchema.optional(),
   reported_date: z.date().default(() => new Date()),
@@ -67,6 +72,7 @@ export const updateMaintenanceRecordSchema = z.object({
   assigned_technician_id: z.string().uuid().nullable().optional(),
   title: z.string().min(1).max(255).optional(),
   description: z.string().nullable().optional(),
+  maintenance_type: maintenanceTypeSchema.optional(),
   priority: maintenancePrioritySchema.optional(),
   status: maintenanceStatusSchema.optional(),
   scheduled_date: z.date().nullable().optional(),
@@ -103,6 +109,7 @@ export const createMaintenanceAttachmentSchema = z.object({
 
 // Infer types from schemas
 export type MaintenanceRecord = z.infer<typeof maintenanceRecordSchema>;
+export type MaintenanceType = z.infer<typeof maintenanceTypeSchema>;
 export type MaintenancePriority = z.infer<typeof maintenancePrioritySchema>;
 export type MaintenanceStatus = z.infer<typeof maintenanceStatusSchema>;
 export type CreateMaintenanceRecord = z.infer<typeof createMaintenanceRecordSchema>;

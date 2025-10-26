@@ -311,6 +311,7 @@ Both use the same JSONB format for granular permission configuration:
 | `assigned_technician_id` | UUID          | Foreign key to User                | NULLABLE, FK     |
 | `title`                  | VARCHAR(255)  | Maintenance title/description      | NOT NULL         |
 | `description`            | TEXT          | Detailed maintenance description   | NULLABLE         |
+| `maintenance_type`       | VARCHAR(20)   | Type: 'scheduled' or 'on_demand'   | NOT NULL         |
 | `priority`               | VARCHAR(20)   | Maintenance priority level         | NOT NULL         |
 | `status`                 | VARCHAR(50)   | Current maintenance status         | NOT NULL         |
 | `reported_date`          | TIMESTAMP     | Issue report timestamp             | NOT NULL         |
@@ -328,11 +329,21 @@ Both use the same JSONB format for granular permission configuration:
 
 **Key Features:**
 
+- **Maintenance Types**: Two distinct maintenance types:
+  - **Scheduled Maintenance**: Planned maintenance activities based on time-based or usage-based schedules
+  - **On-Demand Maintenance**: Unplanned maintenance requested due to accidental events, component failures, or unexpected issues
 - Complete maintenance lifecycle tracking
 - Cost analysis with labor and parts breakdown
 - Time tracking for efficiency analysis
 - Priority and status management
 - Technician assignment and tracking
+
+**Business Rules:**
+
+- All maintenance records must have a `maintenance_type` value of either 'scheduled' or 'on_demand'
+- Scheduled maintenance typically has a `scheduled_date` set during creation
+- On-demand maintenance is created in response to incidents and may not have a `scheduled_date`
+- Maintenance type is required and cannot be NULL
 
 ### Location
 

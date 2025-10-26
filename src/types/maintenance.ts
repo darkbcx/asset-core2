@@ -6,6 +6,8 @@
 
 export type MaintenancePriority = 'low' | 'medium' | 'high' | 'critical';
 
+export type MaintenanceType = 'scheduled' | 'on_demand';
+
 export type MaintenanceStatus = 
   | 'reported'
   | 'scheduled'
@@ -20,6 +22,7 @@ export interface MaintenanceRecord {
   assigned_technician_id: string | null;
   title: string;
   description: string | null;
+  maintenance_type: MaintenanceType;
   priority: MaintenancePriority;
   status: MaintenanceStatus;
   reported_date: Date;
@@ -41,6 +44,7 @@ export interface MaintenanceRecordInsert {
   assigned_technician_id?: string | null;
   title: string;
   description?: string | null;
+  maintenance_type: MaintenanceType;
   priority: MaintenancePriority;
   status?: MaintenanceStatus;
   reported_date: Date;
@@ -59,6 +63,7 @@ export interface MaintenanceRecordUpdate {
   assigned_technician_id?: string | null;
   title?: string;
   description?: string | null;
+  maintenance_type?: MaintenanceType;
   priority?: MaintenancePriority;
   status?: MaintenanceStatus;
   scheduled_date?: Date | null;

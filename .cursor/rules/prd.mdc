@@ -355,7 +355,8 @@ Comprehensive maintenance lifecycle management from issue reporting to completio
 
 **User Stories:**
 
-- As a Maintenance Technician, I want to report component issues quickly so that maintenance can be scheduled promptly
+- As a Maintenance Technician, I want to report component issues quickly so that on-demand maintenance can be scheduled promptly
+- As an Asset Manager, I want to create scheduled maintenance activities so that planned maintenance tasks are properly organized
 - As an Asset Manager, I want to create and assign work orders so that maintenance tasks are properly organized
 - As a Maintenance Technician, I want to document maintenance work with photos and notes so that we have complete records
 - As an Operations Supervisor, I want to track maintenance progress so that I can plan operational schedules
@@ -363,21 +364,27 @@ Comprehensive maintenance lifecycle management from issue reporting to completio
 
 **Acceptance Criteria:**
 
-- [ ] Maintenance request creation with issue description, priority, and affected component
+- [ ] Maintenance type differentiation: Scheduled and On-Demand maintenance
+- [ ] Scheduled maintenance creation with planned date, duration, and advance preparation
+- [ ] On-demand maintenance creation for incidents, failures, and urgent issues
+- [ ] Maintenance request creation with maintenance type, issue description, priority, and affected component
 - [ ] Work order generation with technician assignment, estimated duration, and required resources
 - [ ] Maintenance execution tracking with start time, progress updates, and completion status
 - [ ] Maintenance documentation including photos, notes, parts used, and labor hours
 - [ ] Maintenance cost tracking including labor, parts, and external service costs
-- [ ] Maintenance scheduling with calendar integration and resource availability
+- [ ] Scheduled maintenance scheduling with calendar integration and resource availability
+- [ ] On-demand maintenance escalation and urgent response workflows
 - [ ] Maintenance history and trend analysis for predictive maintenance
 - [ ] Maintenance compliance tracking for regulatory requirements
 
 **Technical Requirements:**
 
-- Maintenance record table with component relationship and workflow status
+- Maintenance record table with component relationship, maintenance type ('scheduled' or 'on_demand'), and workflow status
+- Maintenance type field (VARCHAR) with NOT NULL constraint
 - Work order management system with assignment and tracking
 - File upload system for maintenance documentation
-- Maintenance scheduling engine with calendar integration
+- Scheduled maintenance scheduling engine with calendar integration
+- On-demand maintenance urgent response and escalation workflows
 - Maintenance cost analysis and reporting system
 
 ### 3.5 Real-Time Dashboard & Analytics
@@ -660,77 +667,160 @@ Custom JWT-based authentication system with username/password credentials, provi
 
 ### 4.3 Maintenance Request & Execution Workflow
 
-**Primary User:** Maintenance Technician  
-**Goal:** Report issues and execute maintenance tasks
+**Primary User:** Maintenance Technician / Asset Manager  
+**Goal:** Create, schedule, and execute maintenance tasks for both scheduled and on-demand maintenance
 
-#### 4.3.1 Issue Reporting Flow
+#### 4.3.1 Scheduled Maintenance Flow
+
+**Primary User:** Asset Manager  
+**Goal:** Create planned maintenance activities based on time-based or usage-based schedules
+
+**Step-by-Step Process:**
+
+1. **Identify Scheduled Maintenance Need**
+
+   - Asset manager reviews maintenance schedule for component
+   - System suggests maintenance based on time or usage thresholds
+   - Asset manager identifies component requiring scheduled maintenance
+
+2. **Create Scheduled Maintenance Request**
+
+   - Asset manager clicks "Create Scheduled Maintenance"
+   - System displays scheduled maintenance form
+   - **Required Information:**
+     - Maintenance type: "Scheduled"
+     - Component selection
+     - Scheduled date and time
+     - Priority level (Low, Medium, High)
+     - Maintenance description
+     - Estimated duration
+
+3. **Additional Details**
+
+   - Asset manager adds detailed maintenance instructions
+   - Asset manager specifies required parts and tools
+   - Asset manager assigns technician (or leaves for later assignment)
+   - Asset manager sets maintenance procedures/references
+
+4. **Request Submission**
+
+   - System validates required information
+   - System creates MaintenanceRecord with:
+     - `maintenance_type = 'scheduled'`
+     - `status = 'scheduled'`
+     - `scheduled_date = <selected date/time>`
+   - System generates notification to assigned technician (if applicable)
+   - System updates component schedule visibility
+
+5. **Pre-Maintenance Preparation**
+   - Assigned technician reviews scheduled maintenance details
+   - System sends reminder notifications before scheduled date
+   - Technician prepares tools and parts in advance
+
+**Decision Points:**
+
+- If scheduling conflict with existing maintenance → Suggest alternative time slots
+- If required parts unavailable → Mark maintenance as "pending parts" or reschedule
+- If priority changes → Update maintenance priority and schedule
+
+#### 4.3.2 On-Demand Maintenance Flow (Issue Reporting)
+
+**Primary User:** Maintenance Technician  
+**Goal:** Report unplanned maintenance issues due to accidents, failures, or unexpected problems
 
 **Step-by-Step Process:**
 
 1. **Identify Issue**
 
-   - Technician observes component issue
+   - Technician observes component issue, failure, or accidental event
    - Technician accesses mobile app or web interface
    - Technician navigates to specific asset/component
 
-2. **Create Maintenance Request**
+2. **Create On-Demand Maintenance Request**
 
-   - Technician clicks "Report Issue"
-   - System displays maintenance request form
+   - Technician clicks "Report Issue" or "On-Demand Maintenance"
+   - System displays on-demand maintenance form
    - **Required Information:**
+     - Maintenance type: "On-Demand"
      - Issue description
      - Priority level (Low, Medium, High, Critical)
      - Affected component
      - Issue category (mechanical, electrical, software, etc.)
+     - Incident type (accident, failure, unexpected issue)
 
 3. **Additional Details**
 
-   - Technician adds detailed description
-   - Technician uploads photos (optional)
-   - Technician estimates urgency
-   - Technician adds location notes
+   - Technician adds detailed description of the issue/incident
+   - Technician uploads photos of damage or failure (optional but recommended)
+   - Technician estimates urgency and operational impact
+   - Technician adds location notes and incident context
 
 4. **Request Submission**
 
    - System validates required information
-   - System creates MaintenanceRecord with status "reported"
+   - System creates MaintenanceRecord with:
+     - `maintenance_type = 'on_demand'`
+     - `status = 'reported'`
+     - `scheduled_date = NULL` (on-demand maintenance may not have a scheduled date initially)
    - System automatically updates component status to "repairing"
-   - System generates notification to asset manager
+   - System generates immediate notification to asset manager
+   - System triggers critical alerts if high/critical priority
 
-5. **Assignment & Scheduling**
-   - Asset manager reviews request
-   - Asset manager assigns technician (if not self-reported)
-   - Asset manager schedules maintenance
-   - System updates maintenance record status to "scheduled"
+5. **Urgent Response & Assignment**
+   - Asset manager receives immediate notification
+   - Asset manager reviews urgency and operational impact
+   - Asset manager assigns technician immediately (emergency response)
+   - Asset manager may create emergency work order
+   - System updates maintenance record status to "in_progress" for critical issues
+   - OR System updates to "scheduled" if work can be deferred
 
 **Decision Points:**
 
-- If critical priority → Send immediate alerts to managers
-- If component already under maintenance → Merge with existing record
-- If insufficient information → Request additional details
+- If critical priority → Send immediate alerts to managers and escalate
+- If component already under maintenance → Create separate on-demand record for new issue
+- If sufficient information missing → Request additional details but proceed with urgent response
+- If immediate action required → Assign technician and start work immediately
 
-#### 4.3.2 Maintenance Execution Flow
+#### 4.3.3 Maintenance Execution Flow
+
+**Applies to:** Both scheduled and on-demand maintenance
+
+**Context-Aware Behavior:**
+- **Scheduled Maintenance**: Typically happens at planned times, with advance preparation
+- **On-Demand Maintenance**: Typically happens urgently, often in reactive response to incidents
 
 **Step-by-Step Process:**
 
 1. **Work Order Assignment**
 
    - Technician receives work order notification
-   - Technician reviews maintenance details
+   - Technician reviews maintenance details:
+     - **Maintenance type** (scheduled or on-demand)
+     - For **scheduled**: Planned maintenance with scheduled date
+     - For **on-demand**: Urgent maintenance due to incident/failure
    - Technician accepts or requests reassignment
 
 2. **Maintenance Preparation**
 
-   - Technician gathers required tools and parts
-   - Technician accesses maintenance procedures
-   - Technician updates status to "in progress"
+   - **Scheduled Maintenance:**
+     - Technician reviews advance preparation checklist
+     - Technician gathers required tools and parts (planned)
+     - Technician accesses standard maintenance procedures
+   - **On-Demand Maintenance:**
+     - Technician assesses incident scene and immediate needs
+     - Technician gathers emergency tools and available parts
+     - Technician accesses emergency procedures if applicable
+   - Technician updates status to "in_progress"
 
 3. **Maintenance Execution**
 
    - Technician performs maintenance work
-   - Technician documents work performed
+   - Technician documents work performed:
+     - **Scheduled**: Routine maintenance documentation
+     - **On-Demand**: Incident response and remediation details
    - Technician uploads photos and notes
    - Technician records parts used and labor hours
+   - **On-Demand specific**: Document root cause of failure/incident
 
 4. **Maintenance Completion**
 
@@ -741,18 +831,26 @@ Custom JWT-based authentication system with username/password credentials, provi
      - Parts cost
      - Labor cost
      - Completion notes
+     - **On-Demand specific**: Incident resolution summary and any follow-up actions needed
 
 5. **Status Updates**
    - System updates maintenance record status to "completed"
    - System updates component status to "installed"
    - System calculates total maintenance cost
    - System generates completion notification
+   - **On-Demand**: System flags for incident analysis and trend tracking
 
 **Decision Points:**
 
-- If additional parts needed → Create parts request
-- If maintenance incomplete → Update status to "pending parts"
-- If component replacement required → Initiate component replacement flow
+- **For Scheduled Maintenance:**
+  - If additional parts needed → Reschedule maintenance and notify manager
+  - If maintenance incomplete → Mark as deferred and update schedule
+  - If component replacement required → Create scheduled component replacement maintenance
+
+- **For On-Demand Maintenance:**
+  - If additional parts needed → Create urgent parts request and escalate
+  - If maintenance incomplete → Mark as "ongoing" and update as parts arrive
+  - If component replacement required → Expedite component replacement or emergency repair
 
 ### 4.4 Dashboard & Analytics Workflow
 
