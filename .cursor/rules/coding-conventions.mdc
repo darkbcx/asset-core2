@@ -34,6 +34,68 @@ export async function findAssetById(context: CompanyContext, id: string): Promis
 export class AssetRepository { }
 ```
 
+### Schema Validation & Type Inference
+
+AssetCore uses Zod schemas as the single source of truth for types and validation.
+
+```typescript
+// ✅ CORRECT: Define Zod schemas in /src/lib/validators/ folder
+
+// src/lib/validators/user.ts
+import { z } from 'zod';
+
+export const userSchema = z.object({
+  id: z.string().uuid(),
+  email: z.string().email(),
+  first_name: z.string().min(1).max(100),
+  last_name: z.string().max(100).optional(),
+  is_active: z.boolean(),
+  created_at: z.date(),
+  updated_at: z.date(),
+});
+
+// Create schema with same fields but all optional
+export const createUserSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(8),
+  first_name: z.string().min(1).max(100),
+  last_name: z.string().max(100).optional(),
+});
+
+// ✅ CORRECT: Use z.infer to derive types from schemas
+export type User = z.infer<typeof userSchema>;
+export type CreateUser = z.infer<typeof createUserSchema>;
+
+// ✅ CORRECT: Add extended types/interfaces in the same file
+export interface UserWithCompanies extends User {
+  companies?: UserCompany[];
+}
+
+// ✅ CORRECT: Export types in validator index
+// src/lib/validators/index.ts
+export * from './user';
+
+// ❌ WRONG: Don't create separate type files
+// src/types/user.ts - DON'T do this
+export interface User { ... }
+
+// ❌ WRONG: Don't manually define types when you can infer them
+type User = {
+  id: string;
+  email: string;
+  // ...
+}
+
+// ✅ CORRECT: Use shared schemas in backend logic
+import { createUserSchema } from '@/lib/validators/user';
+import type { CreateUser } from '@/lib/validators/user';
+
+export async function createUser(userData: CreateUser) {
+  const validated = createUserSchema.parse(userData);
+  // ... implementation
+}
+```
+
 ## Naming Conventions
 
 ### Variables & Functions
