@@ -1,206 +1,30 @@
-# AssetCore Database Management
+# Database Setup
 
-This directory contains database migration and seed files for the AssetCore multi-tenant asset management system.
+AssetCore database migrations and seed data.
 
 ## Directory Structure
 
 ```
 database/
-├── migrations/          # Database schema migrations
+├── migrations/              # SQL schema migrations
 │   └── 001_initial_schema.sql
-├── seeds/              # Seed data files
+├── seeds/                   # Sample data for development
 │   └── 001_initial_data.sql
-├── scripts/            # TypeScript utility scripts
-│   ├── init-db.ts      # Interactive database initialization
-│   ├── db-utils.ts     # Database operation utilities
-│   └── README.md       # Scripts documentation
-├── README.md           # This file
-├── QUICK_START.md      # Quick start guide
-└── SCRIPTS.md          # Scripts reference
+└── scripts/                 # TypeScript utility scripts
+    ├── migrate.ts          # Run migrations
+    ├── seed.ts             # Seed sample data
+    └── README.md
 ```
 
 ## Prerequisites
 
 - MySQL 8.0 or higher
-- Database user with CREATE, INSERT, UPDATE, DELETE, and DROP permissions
-- Database created (e.g., `assetcore_dev`)
-
-## Database Setup
-
-### Quick Setup (Recommended)
-
-Use the TypeScript initialization script:
-
-```bash
-npm run db:init
-```
-
-This will:
-- Test MySQL connection
-- Create the database
-- Run all migrations
-- Optionally seed sample data
-
-### Manual Setup
-
-### 1. Create Database
-
-```bash
-# Connect to MySQL
-mysql -u root -p
-
-# Create database
-CREATE DATABASE IF NOT EXISTS assetcore_dev CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-
-# Or for production
-CREATE DATABASE IF NOT EXISTS assetcore_prod CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-
-# Exit MySQL
-EXIT;
-```
-
-### 2. Run Migrations
-
-Using TypeScript script:
-```bash
-DB_PASSWORD=yourpass npm run db:migrate
-```
-
-Or manually:
-```bash
-# From project root
-mysql -u root -p assetcore_dev < database/migrations/001_initial_schema.sql
-```
-
-### 3. Seed Data (Optional)
-
-For development/testing purposes, you can populate the database with sample data:
-
-Using TypeScript script:
-```bash
-DB_PASSWORD=yourpass npm run db:seed
-```
-
-Or manually:
-```bash
-# Seed initial data
-mysql -u root -p assetcore_dev < database/seeds/001_initial_data.sql
-```
-
-### Available Commands
-
-```bash
-# Interactive setup (recommended for first time)
-npm run db:init
-
-# Run migrations
-DB_PASSWORD=yourpass npm run db:migrate
-
-# Seed data
-DB_PASSWORD=yourpass npm run db:seed
-
-# Reset database (drop, create, migrate, seed)
-DB_PASSWORD=yourpass npm run db:reset
-
-# Create backup
-DB_PASSWORD=yourpass npm run db:backup
-
-# Show database status
-DB_PASSWORD=yourpass npm run db:status
-
-# Show help
-npm run db:help
-```
-
-## Testing the Setup
-
-### Verify Tables
-
-```bash
-mysql -u root -p assetcore_dev -e "SHOW TABLES;"
-```
-
-You should see the following tables:
-- `companies`
-- `users`
-- `user_companies`
-- `locations`
-- `assets`
-- `components`
-- `maintenance_records`
-- `component_transfers`
-- `maintenance_attachments`
-- `files`
-- `file_versions`
-- `file_access_logs`
-- `audit_logs`
-
-### Verify Seed Data
-
-```bash
-mysql -u root -p assetcore_dev -e "SELECT COUNT(*) as companies FROM companies; SELECT COUNT(*) as users FROM users;"
-```
-
-## Seed Data Details
-
-### Test Companies
-
-1. **Acme Aviation Corporation** (slug: `acme-aviation`)
-   - Subscription: Professional
-   - Active tenants with assets and components
-
-2. **Global Logistics Ltd** (slug: `global-logistics`)
-   - Subscription: Enterprise
-   - Active tenants
-
-### Test Users
-
-#### System Administrators
-- **Email:** admin@assetcore.com
-- **Password:** Password123!
-- **Role:** Super Administrator
-
-#### Tenant Users (Acme Aviation)
-
-1. **Company Administrator**
-   - Email: john.doe@acme.com
-   - Password: Password123!
-   - Role: Company Administrator
-   - Full permissions within Acme company
-
-2. **Asset Manager**
-   - Email: jane.smith@acme.com
-   - Password: Password123!
-   - Role: Asset Manager
-   - Asset and maintenance management permissions
-
-3. **Maintenance Technician**
-   - Email: mike.johnson@acme.com
-   - Password: Password123!
-   - Role: Maintenance Technician
-   - Maintenance and asset read permissions
-
-#### Tenant Users (Global Logistics)
-
-1. **Company Administrator**
-   - Email: sarah.lee@globallogistics.com
-   - Password: Password123!
-   - Role: Company Administrator
-
-### Sample Data Includes
-
-- **2 Companies** with different subscription plans
-- **5 Users** (1 system admin + 4 tenant users)
-- **3 Locations** (hierarchical structure)
-- **2 Assets** (1 Boeing 737-800 aircraft, 1 Ground Support Vehicle)
-- **4 Components** (2 engines, 1 avionics, 1 vehicle engine)
-- **2 Maintenance Records** (1 scheduled, 1 on-demand)
-- **1 Component Transfer** (example transfer between assets)
-- **1 Audit Log** entry
+- Node.js with yarn
+- Environment variables configured
 
 ## Environment Variables
 
-Make sure your `.env` file has the correct database configuration:
+Create a `.env.local` file in the project root:
 
 ```env
 DB_HOST=localhost
@@ -210,79 +34,120 @@ DB_PASSWORD=your_password
 DB_NAME=assetcore_dev
 ```
 
+## Quick Start
+
+### 1. Run Migrations
+
+```bash
+yarn migrate
+```
+
+This will automatically create the database if it doesn't exist and run all pending migrations.
+
+### 2. Seed Data (Optional)
+
+```bash
+yarn seed
+```
+
+This will automatically create the database if it doesn't exist and execute all seed files.
+
+## Available Commands
+
+```bash
+# Run migrations
+yarn migrate
+
+# Seed database with sample data
+yarn seed
+
+# Reset database (drop all tables)
+yarn reset
+
+# Full reset (drop all tables, re-run migrations and seeds)
+yarn reset:full
+```
+
+## Test Credentials
+
+After seeding, you can use these accounts:
+
+### System Administrator
+- **Email:** admin@assetcore.com
+- **Password:** Password123!
+- **Access:** Full system access
+
+### Company Administrator (Acme Aviation)
+- **Email:** john.doe@acme.com
+- **Password:** Password123!
+- **Access:** Full company access
+
+### Asset Manager
+- **Email:** jane.smith@acme.com
+- **Password:** Password123!
+- **Access:** Asset and maintenance management
+
+### Maintenance Technician
+- **Email:** mike.johnson@acme.com
+- **Password:** Password123!
+- **Access:** Maintenance operations
+
+## Sample Data
+
+The seed script creates:
+- 2 Companies (Acme Aviation, Global Logistics)
+- 5 Users (1 system admin + 4 tenant users)
+- 3 Assets (Boeing 737-800, Ground Support Vehicle, Generator)
+- 4 Components (engines, tires, batteries)
+- 2 Maintenance Records
+- 1 Component Transfer
+
+## Verify Setup
+
+```bash
+# Check tables
+mysql -u root -p assetcore_dev -e "SHOW TABLES;"
+
+# Check record counts
+mysql -u root -p assetcore_dev -e "SELECT 'Companies' as table_name, COUNT(*) as records FROM companies UNION ALL SELECT 'Users', COUNT(*) FROM users UNION ALL SELECT 'Assets', COUNT(*) FROM assets;"
+```
+
+## Migration System
+
+The migration system tracks executed migrations in a `migrations` table:
+- Each migration file must follow the pattern: `NNN_name.sql`
+- Migrations are executed in numerical order
+- Already executed migrations are automatically skipped
+
+## Seed System
+
+The seed script populates the database with sample data for development and testing. ⚠️ **Do NOT run this in production!**
+
 ## Troubleshooting
 
-### UUID Functions Error
-
-If you encounter errors with `UUID_TO_BIN` or `BIN_TO_UUID` functions:
-
-```sql
--- Check if functions exist
-SHOW FUNCTION STATUS WHERE Name IN ('UUID_TO_BIN', 'BIN_TO_UUID');
-
--- If not, the migration file will create them automatically
-```
-
-### Foreign Key Constraints
-
-If you need to disable foreign key checks temporarily:
-
-```sql
-SET FOREIGN_KEY_CHECKS = 0;
--- Your SQL statements
-SET FOREIGN_KEY_CHECKS = 1;
-```
-
-### Character Set Issues
-
-Ensure your database uses UTF-8 encoding:
-
-```sql
-ALTER DATABASE assetcore_dev CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-```
-
-## Backup and Restore
-
-### Backup Database
-
+### MySQL not found
 ```bash
-mysqldump -u root -p assetcore_dev > backup_$(date +%Y%m%d_%H%M%S).sql
+# macOS (Homebrew)
+brew install mysql
+
+# Ubuntu/Debian
+sudo apt-get install mysql-client
 ```
 
-### Restore Database
-
+### Permission denied
 ```bash
-mysql -u root -p assetcore_dev < backup_20240101_120000.sql
+# Grant proper MySQL permissions
+mysql -u root -p -e "GRANT ALL PRIVILEGES ON assetcore_dev.* TO 'root'@'localhost';"
 ```
 
-## Reset Database
-
-To completely reset the database (⚠️ **WARNING: This will delete all data**):
-
-Using TypeScript script:
-```bash
-DB_PASSWORD=yourpass npm run db:reset
-```
-
-Or manually:
-```bash
-# Drop and recreate database
-mysql -u root -p -e "DROP DATABASE IF EXISTS assetcore_dev; CREATE DATABASE assetcore_dev CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
-
-# Run migrations and seeds
-mysql -u root -p assetcore_dev < database/migrations/001_initial_schema.sql
-mysql -u root -p assetcore_dev < database/seeds/001_initial_data.sql
-```
+### Connection refused
+- Check MySQL is running: `brew services list` (macOS) or `sudo systemctl status mysql` (Linux)
+- Verify host and port in `.env.local`
 
 ## Next Steps
 
 After setting up the database:
-
 1. Update your `.env` file with database credentials
 2. Test database connection in your application
 3. Verify data with the test users
 4. Start developing with the seeded data
-
-## Support
-
-For issues or questions about the database setup, please refer to the main project documentation or contact the development team.

@@ -2,24 +2,9 @@
 -- Initial Schema Creation
 -- Version: 1.0.0
 
--- Enable UUID generation functions
+-- Set SQL mode
 SET @old_sql_mode = @@sql_mode;
 SET sql_mode = 'ONLY_FULL_GROUP_BY,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION';
-
--- Create UUID generation function if not exists
-DROP FUNCTION IF EXISTS UUID_TO_BIN;
-CREATE FUNCTION UUID_TO_BIN(uuid CHAR(36)) RETURNS BINARY(16)
-RETURN UNHEX(REPLACE(uuid, '-', ''));
-
-DROP FUNCTION IF EXISTS BIN_TO_UUID;
-CREATE FUNCTION BIN_TO_UUID(bin BINARY(16)) RETURNS CHAR(36)
-RETURN LOWER(CONCAT(
-    HEX(SUBSTRING(bin, 1, 4)), '-',
-    HEX(SUBSTRING(bin, 5, 2)), '-',
-    HEX(SUBSTRING(bin, 7, 2)), '-',
-    HEX(SUBSTRING(bin, 9, 2)), '-',
-    HEX(SUBSTRING(bin, 11, 6))
-));
 
 -- ============================================
 -- Core Tables
@@ -27,7 +12,7 @@ RETURN LOWER(CONCAT(
 
 -- Companies (Tenant Management)
 CREATE TABLE IF NOT EXISTS companies (
-    id BINARY(16) PRIMARY KEY,
+    id VARCHAR(36) PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     slug VARCHAR(100) NOT NULL UNIQUE,
     domain VARCHAR(255),
@@ -42,7 +27,7 @@ CREATE TABLE IF NOT EXISTS companies (
 
 -- Users (with dual type support: tenant and system_admin)
 CREATE TABLE IF NOT EXISTS users (
-    id BINARY(16) PRIMARY KEY,
+    id VARCHAR(36) PRIMARY KEY,
     user_type VARCHAR(20) NOT NULL CHECK (user_type IN ('tenant', 'system_admin')),
     system_role VARCHAR(50),
     system_permissions JSON,
@@ -62,9 +47,9 @@ CREATE TABLE IF NOT EXISTS users (
 
 -- UserCompany (Many-to-Many relationship)
 CREATE TABLE IF NOT EXISTS user_companies (
-    id BINARY(16) PRIMARY KEY,
-    user_id BINARY(16) NOT NULL,
-    company_id BINARY(16) NOT NULL,
+    id VARCHAR(36) PRIMARY KEY,
+    user_id VARCHAR(36) NOT NULL,
+    company_id VARCHAR(36) NOT NULL,
     role VARCHAR(50) NOT NULL,
     permissions JSON DEFAULT ('{}'),
     is_active BOOLEAN DEFAULT TRUE,
@@ -83,9 +68,9 @@ CREATE TABLE IF NOT EXISTS user_companies (
 
 -- Locations (Hierarchical structure)
 CREATE TABLE IF NOT EXISTS locations (
-    id BINARY(16) PRIMARY KEY,
-    company_id BINARY(16) NOT NULL,
-    parent_id BINARY(16),
+    id VARCHAR(36) PRIMARY KEY,
+    company_id VARCHAR(36) NOT NULL,
+    parent_id VARCHAR(36),
     name VARCHAR(255) NOT NULL,
     type VARCHAR(50) NOT NULL,
     address TEXT,
@@ -97,21 +82,20 @@ CREATE TABLE IF NOT EXISTS locations (
     FOREIGN KEY (parent_id) REFERENCES locations(id) ON DELETE SET NULL,
     INDEX idx_company_id (company_id),
     INDEX idx_parent_id (parent_id),
-    INDEX idx_is_active (is_active),
-    SPATIAL INDEX idx_coordinates (coordinates)
+    INDEX idx_is_active (is_active)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Assets
 CREATE TABLE IF NOT EXISTS assets (
-    id BINARY(16) PRIMARY KEY,
-    company_id BINARY(16) NOT NULL,
+    id VARCHAR(36) PRIMARY KEY,
+    company_id VARCHAR(36) NOT NULL,
     asset_code VARCHAR(100) NOT NULL,
     name VARCHAR(255) NOT NULL,
     type VARCHAR(100) NOT NULL,
     model VARCHAR(255),
     serial_number VARCHAR(255),
     status VARCHAR(50) NOT NULL,
-    location_id BINARY(16),
+    location_id VARCHAR(36),
     purchase_date DATE,
     warranty_expiry DATE,
     purchase_cost DECIMAL(15,2),
@@ -131,8 +115,8 @@ CREATE TABLE IF NOT EXISTS assets (
 
 -- Components
 CREATE TABLE IF NOT EXISTS components (
-    id BINARY(16) PRIMARY KEY,
-    asset_id BINARY(16) NOT NULL,
+    id VARCHAR(36) PRIMARY KEY,
+    asset_id VARCHAR(36) NOT NULL,
     component_code VARCHAR(100) NOT NULL,
     name VARCHAR(255) NOT NULL,
     type VARCHAR(100) NOT NULL,
@@ -157,9 +141,9 @@ CREATE TABLE IF NOT EXISTS components (
 
 -- Maintenance Records
 CREATE TABLE IF NOT EXISTS maintenance_records (
-    id BINARY(16) PRIMARY KEY,
-    component_id BINARY(16) NOT NULL,
-    assigned_technician_id BINARY(16),
+    id VARCHAR(36) PRIMARY KEY,
+    component_id VARCHAR(36) NOT NULL,
+    assigned_technician_id VARCHAR(36),
     title VARCHAR(255) NOT NULL,
     description TEXT,
     maintenance_type VARCHAR(20) NOT NULL CHECK (maintenance_type IN ('scheduled', 'on_demand')),
@@ -194,13 +178,13 @@ CREATE TABLE IF NOT EXISTS maintenance_records (
 
 -- Component Transfers
 CREATE TABLE IF NOT EXISTS component_transfers (
-    id BINARY(16) PRIMARY KEY,
-    component_id BINARY(16) NOT NULL,
-    from_asset_id BINARY(16) NOT NULL,
-    to_asset_id BINARY(16) NOT NULL,
+    id VARCHAR(36) PRIMARY KEY,
+    component_id VARCHAR(36) NOT NULL,
+    from_asset_id VARCHAR(36) NOT NULL,
+    to_asset_id VARCHAR(36) NOT NULL,
     transfer_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     reason VARCHAR(255),
-    performed_by BINARY(16) NOT NULL,
+    performed_by VARCHAR(36) NOT NULL,
     notes TEXT,
     FOREIGN KEY (component_id) REFERENCES components(id) ON DELETE CASCADE,
     FOREIGN KEY (from_asset_id) REFERENCES assets(id) ON DELETE CASCADE,
@@ -214,13 +198,13 @@ CREATE TABLE IF NOT EXISTS component_transfers (
 
 -- Maintenance Attachments
 CREATE TABLE IF NOT EXISTS maintenance_attachments (
-    id BINARY(16) PRIMARY KEY,
-    maintenance_record_id BINARY(16) NOT NULL,
+    id VARCHAR(36) PRIMARY KEY,
+    maintenance_record_id VARCHAR(36) NOT NULL,
     file_name VARCHAR(255) NOT NULL,
     file_path VARCHAR(500) NOT NULL,
     file_size BIGINT NOT NULL,
     mime_type VARCHAR(100) NOT NULL,
-    uploaded_by BINARY(16) NOT NULL,
+    uploaded_by VARCHAR(36) NOT NULL,
     uploaded_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (maintenance_record_id) REFERENCES maintenance_records(id) ON DELETE CASCADE,
     FOREIGN KEY (uploaded_by) REFERENCES users(id) ON DELETE RESTRICT,
@@ -230,10 +214,10 @@ CREATE TABLE IF NOT EXISTS maintenance_attachments (
 
 -- Files (Entity-agnostic file storage)
 CREATE TABLE IF NOT EXISTS files (
-    id BINARY(16) PRIMARY KEY,
-    company_id BINARY(16) NOT NULL,
+    id VARCHAR(36) PRIMARY KEY,
+    company_id VARCHAR(36) NOT NULL,
     entity_type VARCHAR(50) NOT NULL,
-    entity_id BINARY(16) NOT NULL,
+    entity_id VARCHAR(36) NOT NULL,
     file_name VARCHAR(255) NOT NULL,
     original_name VARCHAR(255) NOT NULL,
     file_path VARCHAR(500) NOT NULL,
@@ -244,7 +228,7 @@ CREATE TABLE IF NOT EXISTS files (
     storage_path VARCHAR(500) NOT NULL,
     metadata JSON DEFAULT ('{}'),
     is_public BOOLEAN DEFAULT FALSE,
-    uploaded_by BINARY(16) NOT NULL,
+    uploaded_by VARCHAR(36) NOT NULL,
     uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     deleted_at TIMESTAMP NULL,
@@ -259,14 +243,14 @@ CREATE TABLE IF NOT EXISTS files (
 
 -- File Versions
 CREATE TABLE IF NOT EXISTS file_versions (
-    id BINARY(16) PRIMARY KEY,
-    file_id BINARY(16) NOT NULL,
+    id VARCHAR(36) PRIMARY KEY,
+    file_id VARCHAR(36) NOT NULL,
     version_number INT NOT NULL,
     file_path VARCHAR(500) NOT NULL,
     file_size BIGINT NOT NULL,
     file_hash VARCHAR(64) NOT NULL,
     change_description TEXT,
-    created_by BINARY(16) NOT NULL,
+    created_by VARCHAR(36) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (file_id) REFERENCES files(id) ON DELETE CASCADE,
     FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE RESTRICT,
@@ -277,9 +261,9 @@ CREATE TABLE IF NOT EXISTS file_versions (
 
 -- File Access Logs
 CREATE TABLE IF NOT EXISTS file_access_logs (
-    id BINARY(16) PRIMARY KEY,
-    file_id BINARY(16) NOT NULL,
-    user_id BINARY(16),
+    id VARCHAR(36) PRIMARY KEY,
+    file_id VARCHAR(36) NOT NULL,
+    user_id VARCHAR(36),
     action VARCHAR(50) NOT NULL,
     ip_address VARCHAR(45),
     user_agent TEXT,
@@ -293,12 +277,12 @@ CREATE TABLE IF NOT EXISTS file_access_logs (
 
 -- Audit Logs
 CREATE TABLE IF NOT EXISTS audit_logs (
-    id BINARY(16) PRIMARY KEY,
-    company_id BINARY(16) NOT NULL,
-    user_id BINARY(16),
+    id VARCHAR(36) PRIMARY KEY,
+    company_id VARCHAR(36) NOT NULL,
+    user_id VARCHAR(36),
     action VARCHAR(100) NOT NULL,
     entity_type VARCHAR(100) NOT NULL,
-    entity_id BINARY(16) NOT NULL,
+    entity_id VARCHAR(36) NOT NULL,
     old_values JSON,
     new_values JSON,
     ip_address VARCHAR(45),

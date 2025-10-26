@@ -1,114 +1,90 @@
 # Database Scripts
 
-This directory contains utility scripts for database management and automation.
+Scripts for managing database migrations and seed data.
 
-## Available Scripts
+## Scripts
 
-### Database Initialization
+### migrate.ts
 
-**Script:** `init-db.ts`
-
-Interactive script that guides you through the database setup process.
-
-Initialize and set up the AssetCore database with migrations and optional seed data.
+Runs all pending SQL migrations in order, tracking executed migrations in the `migrations` table.
 
 **Usage:**
 ```bash
-# Using npm script (recommended)
-npm run db:init
-
-# Or directly with tsx
-npx tsx database/scripts/init-db.ts
+yarn migrate
 ```
 
 **Features:**
-- ✅ Interactive password prompt
-- ✅ Tests MySQL connection before proceeding
-- ✅ Creates database if it doesn't exist
-- ✅ Runs all migrations automatically
-- ✅ Optional database seeding with sample data
-- ✅ Displays database summary after seeding
-- ✅ Colored console output for better visibility
-- ✅ Graceful error handling
+- Automatically tracks executed migrations
+- Skips already executed migrations
+- Executes migrations in numerical order
+- Rolls back on error
 
-**Environment Variables:**
-- `DB_HOST` - Database host (default: localhost)
-- `DB_PORT` - Database port (default: 3306)
-- `DB_USER` - Database user (default: root)
-- `DB_PASSWORD` - Database password (can be set or prompted)
-- `DB_NAME` - Database name (default: assetcore_dev)
+### seed.ts
 
-**Example:**
-```bash
-DB_HOST=localhost DB_USER=admin npm run db:init
-```
-
-## Script Details
-
-### init-db.ts
-
-A TypeScript script that automates the database initialization process.
-
-**Process:**
-1. Tests MySQL connection
-2. Creates the database if it doesn't exist
-3. Runs all migration files from `database/migrations/`
-4. Prompts user to seed sample data (optional)
-5. Displays summary of created records
-
-**Dependencies:**
-- `mysql2` - MySQL client for Node.js
-- `tsx` - TypeScript execution environment
-
-**Benefits over bash script:**
-- ✅ Type-safe implementation
-- ✅ Better error handling
-- ✅ Cross-platform compatibility
-- ✅ Integrated with TypeScript project
-- ✅ Consistent with project tooling
-
-### Database Utilities
-
-**Script:** `db-utils.ts`
-
-Utility script for common database operations. Requires `DB_PASSWORD` environment variable.
+Generates sample data for development and testing.
 
 **Usage:**
 ```bash
-# Run migrations
-npm run db:migrate
-
-# Seed database
-npm run db:seed
-
-# Reset database (drop, create, migrate, seed)
-npm run db:reset
-
-# Create backup
-npm run db:backup
-
-# Show database status
-npm run db:status
-
-# Show help
-npm run db:help
+yarn seed
 ```
 
-**Commands:**
-- `migrate` - Run database migrations
-- `seed` - Seed database with sample data
-- `reset` - Drop, create, migrate, and seed database
-- `backup` - Create database backup
-- `status` - Show database status and table information
+**Includes:**
+- Test users with different roles
+- Sample companies
+- Assets and components
+- Maintenance records
 
-**Environment Variables:**
-- `DB_HOST` - Database host (default: localhost)
-- `DB_PORT` - Database port (default: 3306)
-- `DB_USER` - Database user (default: root)
-- `DB_PASSWORD` - Database password (required)
-- `DB_NAME` - Database name (default: assetcore_dev)
+**⚠️ DO NOT run in production!**
 
-**Example:**
+The script generates all data programmatically using INSERT statements.
+
+### reset.ts
+
+Drops all tables in the database and optionally re-runs migrations and seeds.
+
+**Usage:**
 ```bash
-DB_PASSWORD=yourpass npm run db:migrate
+yarn reset        # Drop all tables
+yarn reset:full   # Drop all tables, re-run migrations and seeds
 ```
+
+**⚠️ WARNING: This will delete all data!**
+
+**Features:**
+- Drops all tables in the database
+- Temporarily disables foreign key checks
+- Optionally re-runs migrations and seeds for a full reset
+- Automatically creates database if it doesn't exist
+
+## Environment Variables
+
+All scripts use the following environment variables from `.env.local`:
+
+```env
+DB_HOST=localhost
+DB_PORT=3306
+DB_USER=root
+DB_PASSWORD=your_password
+DB_NAME=assetcore_dev
+```
+
+## Migration Files
+
+Migration files should follow the naming pattern: `NNN_name.sql`
+
+Example:
+- `001_initial_schema.sql`
+- `002_add_new_table.sql`
+
+The number prefix determines execution order.
+
+## Seed Files
+
+Seed files contain INSERT statements for sample data. Currently:
+- `001_initial_data.sql`
+
+## Error Handling
+
+- Migrations rollback on error
+- Seed operations rollback on error
+- Both scripts log detailed progress
