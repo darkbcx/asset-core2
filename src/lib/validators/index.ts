@@ -65,3 +65,40 @@ export type DateRange = z.infer<typeof dateRangeSchema>;
 export type SearchQuery = z.infer<typeof searchQuerySchema>;
 export type Filter = z.infer<typeof filterSchema>;
 
+// Common utility types
+export type Timestamps = {
+  created_at: Date;
+  updated_at: Date;
+};
+
+export type SoftDelete = {
+  deleted_at: Date | null;
+};
+
+export interface PaginatedResponse<T> {
+  data: T[];
+  pagination: {
+    total: number;
+    offset: number;
+    limit: number;
+    has_more: boolean;
+  };
+}
+
+export interface ApiError {
+  error: string;
+  message: string;
+  details?: Record<string, unknown>;
+  code?: string;
+}
+
+export interface ApiSuccess<T> {
+  success: true;
+  data: T;
+}
+
+export interface ApiResponse<T> {
+  data: T;
+  message?: string;
+}
+

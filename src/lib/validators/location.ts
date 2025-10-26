@@ -65,3 +65,7 @@ export type LocationType = z.infer<typeof locationTypeSchema>;
 export type CreateLocation = z.infer<typeof createLocationSchema>;
 export type UpdateLocation = z.infer<typeof updateLocationSchema>;
 
+// Extended types
+export interface LocationWithChildren extends Location {
+  children?: LocationWithChildren[];
+}

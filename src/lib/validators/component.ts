@@ -103,4 +103,3 @@ export type CreateComponent = z.infer<typeof createComponentSchema>;
 export type UpdateComponent = z.infer<typeof updateComponentSchema>;
 export type ComponentTransfer = z.infer<typeof componentTransferSchema>;
 export type CreateComponentTransfer = z.infer<typeof createComponentTransferSchema>;
-

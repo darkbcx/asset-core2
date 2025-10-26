@@ -120,4 +120,3 @@ export type CreateFileVersion = z.infer<typeof createFileVersionSchema>;
 export type FileAccessLog = z.infer<typeof fileAccessLogSchema>;
 export type CreateFileAccessLog = z.infer<typeof createFileAccessLogSchema>;
 export type FileUpload = z.infer<typeof fileUploadSchema>;
-

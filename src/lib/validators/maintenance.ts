@@ -116,4 +116,3 @@ export type CreateMaintenanceRecord = z.infer<typeof createMaintenanceRecordSche
 export type UpdateMaintenanceRecord = z.infer<typeof updateMaintenanceRecordSchema>;
 export type MaintenanceAttachment = z.infer<typeof maintenanceAttachmentSchema>;
 export type CreateMaintenanceAttachment = z.infer<typeof createMaintenanceAttachmentSchema>;
-
