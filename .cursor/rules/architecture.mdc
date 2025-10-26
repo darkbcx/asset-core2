@@ -77,6 +77,8 @@ src/
 - **Purpose**: Core logic (repositories, services, data access). Stateless and framework-agnostic.
 - **Depends On**: `lib/db.ts`, `lib/validators/`
 - **Migration**: Moved directly to backend service
+- **Database Access**: Only backend functions execute database queries
+- **API Routes Dependency**: API routes delegate to backend functions, never access database directly
 
 ### Data Access Layer
 - **Folder**: `src/lib/db.ts`
@@ -144,6 +146,39 @@ This demonstrates the complete data flow when a user requests information throug
 
 This flow ensures clean separation of concerns while maintaining type safety across all layers.
 
+#### Example: Correct vs Incorrect Implementation
+
+**✅ CORRECT: API route delegates to backend**
+```typescript
+// src/app/api/users/[id]/route.ts
+import { NextRequest, NextResponse } from 'next/server';
+import { getUserById } from '@/backend/user';
+
+export async function GET(request: NextRequest) {
+  const userId = request.params.id;
+  const result = await getUserById(userId);
+  
+  if (!result.success) {
+    return NextResponse.json({ error: result.error }, { status: 404 });
+  }
+  
+  return NextResponse.json({ user: result.result });
+}
+```
+
+**❌ WRONG: API route executes direct database query**
+```typescript
+// src/app/api/users/[id]/route.ts
+import { NextRequest, NextResponse } from 'next/server';
+import { db } from '@/lib/db'; // ❌ DON'T import db in API routes
+
+export async function GET(request: NextRequest) {
+  const userId = request.params.id;
+  const [users] = await db.execute('SELECT * FROM users WHERE id = ?', [userId]); // ❌ DON'T query directly
+  return NextResponse.json({ user: users[0] });
+}
+```
+
 ## Design Principles
 
 ### Core Architectural Principles
@@ -152,6 +187,7 @@ This flow ensures clean separation of concerns while maintaining type safety acr
 
    - API routes (`/app/api`) should only handle request/response logic
    - No business logic in route handlers
+   - **No direct database queries** - all queries delegated to backend functions
    - Focus on HTTP concerns (validation, serialization, error handling)
 
 2. **Business Logic Isolation**
@@ -228,6 +264,9 @@ packages/
 - **Response Serialization**: Format responses consistently
 - **Error Handling**: Handle HTTP errors and return appropriate status codes
 - **Authentication**: Validate JWT tokens and user permissions
+- **No Database Access**: API routes MUST NOT execute direct database queries
+- **Delegate to Backend**: All database operations must be delegated to backend repository functions
+- **Layer Separation**: Thin controllers that only handle HTTP concerns (request/response mapping)
 
 ### Frontend Layer (`src/app/`)
 

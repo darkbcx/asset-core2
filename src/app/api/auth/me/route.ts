@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyToken } from '@/backend/authentication';
-import { db } from '@/lib/db';
+import { verifyToken, createAuthContext } from '@/backend/authentication';
 
 export async function GET(request: NextRequest) {
   try {
@@ -23,35 +22,17 @@ export async function GET(request: NextRequest) {
       );
     }
     
-    // Fetch user details from database
-    const [users] = await db.execute(
-      'SELECT id, email, first_name, last_name, user_type, system_role FROM users WHERE id = ? AND is_active = true',
-      [userInfo.userId]
-    );
+    // Fetch user details with companies using backend function
+    const authContextResult = await createAuthContext(token);
     
-    const user = (users as any[])[0];
-    
-    if (!user) {
+    if (!authContextResult.success || !authContextResult.result) {
       return NextResponse.json(
-        { error: 'User not found' },
+        { error: authContextResult.error || 'User not found' },
         { status: 404 }
       );
     }
     
-    // Fetch user's company associations if tenant user
-    let companies = [];
-    if (user.user_type === 'tenant') {
-      const [companyRows] = await db.execute(
-        `SELECT uc.company_id, uc.role, uc.permissions, uc.is_primary, uc.is_active,
-                c.name as company_name, c.slug as company_slug
-         FROM user_companies uc
-         JOIN companies c ON uc.company_id = c.id
-         WHERE uc.user_id = ? AND uc.is_active = true AND c.is_active = true
-         ORDER BY uc.is_primary DESC, uc.joined_at ASC`,
-        [user.id]
-      );
-      companies = companyRows as any[];
-    }
+    const { user, companies } = authContextResult.result;
     
     return NextResponse.json({
       success: true,

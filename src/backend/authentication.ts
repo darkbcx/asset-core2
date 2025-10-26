@@ -16,13 +16,14 @@ import jwt from 'jsonwebtoken';
 import { v4 as uuidv4 } from 'uuid';
 import { db } from '@/lib/db';
 import { loginSchema, createUserSchema } from '@/lib/validators/user';
-import type { User, CreateUser, Login } from '@/lib/validators/user';
+import type { User, CreateUser, Login, UserCompany } from '@/lib/validators/user';
 import { 
   getUserByEmail,
   getUserById,
   getUserWithCompanies,
   updateLastLogin 
 } from '@/backend/user';
+import type { BackendResponse } from '@/backend/types';
 
 /**
  * JWT configuration
@@ -52,6 +53,8 @@ export interface RefreshTokenResponse {
   expiresIn: number;
 }
 
+
+
 /**
  * JWT Token Claims
  * Uses only standard JWT claims
@@ -65,58 +68,94 @@ export interface JWTCustomClaims extends jwt.JwtPayload {
  * 
  * @param credentials - Login credentials (email and password)
  * @returns Authentication response with user and JWT tokens
- * @throws Error if credentials are invalid or user not found
  */
-export async function login(credentials: Login): Promise<AuthResponse> {
-  // Validate input
-  const validatedCredentials = loginSchema.parse(credentials);
-  
-  // Find user by email
-  const user = await getUserByEmail(validatedCredentials.email);
-  
-  if (!user) {
-    throw new Error('Invalid email or password');
+export async function login(credentials: Login): Promise<BackendResponse<AuthResponse & { companies: Record<string, unknown>[] }>> {
+  try {
+    // Validate input
+    const validatedCredentials = loginSchema.parse(credentials);
+    
+    // Find user by email
+    const userResult = await getUserByEmail(validatedCredentials.email);
+    
+    if (!userResult.success || !userResult.result) {
+      return {
+        success: false,
+        error: 'Invalid email or password',
+      };
+    }
+    
+    const user = userResult.result;
+    
+    // Verify password
+    const isPasswordValid = await verifyPassword(
+      validatedCredentials.password,
+      user.password_hash
+    );
+    
+    if (!isPasswordValid) {
+      return {
+        success: false,
+        error: 'Invalid email or password',
+      };
+    }
+    
+    // Check if user is active
+    if (!user.is_active) {
+      return {
+        success: false,
+        error: 'Account is inactive. Please contact support.',
+      };
+    }
+    
+    // Update last login timestamp
+    await updateLastLogin(user.id);
+    
+    // Generate JWT tokens with standard claims only
+    const now = Math.floor(Date.now() / 1000); // Current timestamp in seconds
+    const tokenData = {
+      sub: user.id,                    // Subject (user ID) - only claim needed
+      iat: now,                         // Issued at
+      aud: 'assetcore-client',          // Audience
+      iss: 'assetcore',                 // Issuer
+    };
+    
+    const token = generateToken(tokenData);
+    const refreshToken = generateRefreshToken(tokenData);
+    
+    // Parse expires in to get numeric value
+    const expiresIn = parseExpiresIn(JWT_EXPIRES_IN);
+    
+    // Get user companies if tenant user
+    let companies: Record<string, unknown>[] = [];
+    if (user.user_type === 'tenant') {
+      const [companyRows] = await db.execute(
+        `SELECT uc.company_id, uc.role, uc.permissions, uc.is_primary, uc.is_active,
+                c.name as company_name, c.slug as company_slug
+         FROM user_companies uc
+         JOIN companies c ON uc.company_id = c.id
+         WHERE uc.user_id = ? AND uc.is_active = true AND c.is_active = true
+         ORDER BY uc.is_primary DESC, uc.joined_at ASC`,
+        [user.id]
+      );
+      companies = companyRows as Record<string, unknown>[];
+    }
+    
+    return {
+      success: true,
+      result: {
+        user,
+        token,
+        refreshToken,
+        expiresIn,
+        companies,
+      },
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Login failed',
+    };
   }
-  
-  // Verify password
-  const isPasswordValid = await verifyPassword(
-    validatedCredentials.password,
-    user.password_hash
-  );
-  
-  if (!isPasswordValid) {
-    throw new Error('Invalid email or password');
-  }
-  
-  // Check if user is active
-  if (!user.is_active) {
-    throw new Error('Account is inactive. Please contact support.');
-  }
-  
-  // Update last login timestamp
-  await updateLastLogin(user.id);
-  
-  // Generate JWT tokens with standard claims only
-  const now = Math.floor(Date.now() / 1000); // Current timestamp in seconds
-  const tokenData = {
-    sub: user.id,                    // Subject (user ID) - only claim needed
-    iat: now,                         // Issued at
-    aud: 'assetcore-client',          // Audience
-    iss: 'assetcore',                 // Issuer
-  };
-  
-  const token = generateToken(tokenData);
-  const refreshToken = generateRefreshToken(tokenData);
-  
-  // Parse expires in to get numeric value
-  const expiresIn = parseExpiresIn(JWT_EXPIRES_IN);
-  
-  return {
-    user,
-    token,
-    refreshToken,
-    expiresIn,
-  };
 }
 
 /**
@@ -124,9 +163,8 @@ export async function login(credentials: Login): Promise<AuthResponse> {
  * 
  * @param refreshToken - Valid refresh token
  * @returns New authentication tokens
- * @throws Error if refresh token is invalid or expired
  */
-export async function refreshToken(refreshToken: string): Promise<RefreshTokenResponse> {
+export async function refreshToken(refreshToken: string): Promise<BackendResponse<RefreshTokenResponse & { user: User }>> {
   try {
     // Verify and decode refresh token
     const decoded = jwt.verify(refreshToken, JWT_SECRET) as JWTCustomClaims;
@@ -134,19 +172,30 @@ export async function refreshToken(refreshToken: string): Promise<RefreshTokenRe
     // Validate token structure
     const userId = decoded.sub;
     if (!userId) {
-      throw new Error('Invalid token structure');
+      return {
+        success: false,
+        error: 'Invalid token structure',
+      };
     }
     
     // Get user from database
-    const user = await getUserById(userId);
+    const userResult = await getUserById(userId);
     
-    if (!user) {
-      throw new Error('User not found');
+    if (!userResult.success || !userResult.result) {
+      return {
+        success: false,
+        error: 'User not found',
+      };
     }
+    
+    const user = userResult.result;
     
     // Check if user is still active
     if (!user.is_active) {
-      throw new Error('Account is inactive');
+      return {
+        success: false,
+        error: 'Account is inactive',
+      };
     }
     
     // Generate new tokens with standard claims only
@@ -163,18 +212,31 @@ export async function refreshToken(refreshToken: string): Promise<RefreshTokenRe
     const expiresIn = parseExpiresIn(JWT_EXPIRES_IN);
     
     return {
-      token: newToken,
-      refreshToken: newRefreshToken,
-      expiresIn,
+      success: true,
+      result: {
+        token: newToken,
+        refreshToken: newRefreshToken,
+        expiresIn,
+        user,
+      },
     };
   } catch (error) {
     if (error instanceof jwt.TokenExpiredError) {
-      throw new Error('Refresh token has expired');
+      return {
+        success: false,
+        error: 'Refresh token has expired',
+      };
     }
     if (error instanceof jwt.JsonWebTokenError) {
-      throw new Error('Invalid refresh token');
+      return {
+        success: false,
+        error: 'Invalid refresh token',
+      };
     }
-    throw error;
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Token refresh failed',
+    };
   }
 }
 
@@ -204,27 +266,6 @@ export function verifyToken(token: string): JWTCustomClaims {
     }
     throw error;
   }
-}
-
-/**
- * Extract user ID from JWT token
- * Uses standard JWT 'sub' claim for user ID
- * 
- * @param token - JWT token
- * @returns User ID
- * @throws Error if token is invalid or user ID not found
- */
-export function getUserIdFromToken(token: string): string {
-  const decoded = verifyToken(token);
-  
-  // Use standard JWT 'sub' claim for user ID
-  const userId = decoded.sub;
-  
-  if (!userId) {
-    throw new Error('Invalid token: user ID not found');
-  }
-  
-  return userId;
 }
 
 /**
@@ -308,19 +349,25 @@ export async function changePassword(
   userId: string,
   currentPassword: string,
   newPassword: string
-): Promise<void> {
+): Promise<BackendResponse<void>> {
   // Get user
-  const user = await getUserById(userId);
+  const {success, result: user} = await getUserById(userId);
   
-  if (!user) {
-    throw new Error('User not found');
+  if (!success || !user) {
+    return {
+      success: false,
+      error: 'User not found',
+    };
   }
   
   // Verify current password
   const isPasswordValid = await verifyPassword(currentPassword, user.password_hash);
   
   if (!isPasswordValid) {
-    throw new Error('Current password is incorrect');
+    return {
+      success: false,
+      error: 'Current password is incorrect',
+    };
   }
   
   // Hash new password
@@ -334,6 +381,11 @@ export async function changePassword(
   `;
   
   await db.execute(query, [newPasswordHash, new Date(), userId]);
+
+  return {
+    success: true,
+    result: undefined,
+  };
 }
 
 /**
@@ -343,12 +395,15 @@ export async function changePassword(
  * @param newPassword - New password
  * @throws Error if user not found
  */
-export async function resetPassword(email: string, newPassword: string): Promise<void> {
+export async function resetPassword(email: string, newPassword: string): Promise<BackendResponse<void>> {
   // Find user by email
-  const user = await getUserByEmail(email);
+  const {success, result: user} = await getUserByEmail(email);
   
-  if (!user) {
-    throw new Error('User not found');
+  if (!success || !user) {
+    return {
+      success: false,
+      error: 'User not found',
+    };
   }
   
   // Hash new password
@@ -362,6 +417,11 @@ export async function resetPassword(email: string, newPassword: string): Promise
   `;
   
   await db.execute(query, [passwordHash, new Date(), user.id]);
+
+  return {
+    success: true,
+    result: undefined,
+  };
 }
 
 
@@ -445,59 +505,81 @@ function parseExpiresIn(expiresIn: string): number {
 }
 
 /**
- * Authentication utilities
+ * Extract JWT token from Authorization header
+ * Simple utility function for parsing Bearer tokens
+ * 
+ * @param authHeader - Authorization header value
+ * @returns Token string or null
  */
-export const authUtils = {
-  /**
-   * Extract JWT token from Authorization header
-   * 
-   * @param authHeader - Authorization header value
-   * @returns Token string or null
-   */
-  extractTokenFromHeader(authHeader: string | null): string | null {
-    if (!authHeader) {
-      return null;
-    }
-    
-    const parts = authHeader.split(' ');
-    if (parts.length !== 2 || parts[0] !== 'Bearer') {
-      return null;
-    }
-    
-    return parts[1];
-  },
+export function extractTokenFromHeader(authHeader: string | null): string | null {
+  if (!authHeader) {
+    return null;
+  }
   
-  /**
-   * Create auth context from token
-   * 
-   * @param token - JWT token
-   * @returns Auth context with user information
-   */
-  async createAuthContext(token: string) {
+  const parts = authHeader.split(' ');
+  if (parts.length !== 2 || parts[0] !== 'Bearer') {
+    return null;
+  }
+  
+  return parts[1];
+}
+
+/**
+ * Create auth context from token
+ * Fetches user with companies and returns complete auth context
+ * 
+ * @param token - JWT token
+ * @returns Auth context with user information
+ */
+export async function createAuthContext(token: string): Promise<BackendResponse<{
+  user: User;
+  userId: string;
+  email: string;
+  userType: string;
+  systemRole: string | null;
+  companies: UserCompany[];
+}>> {
+  try {
     const decoded = verifyToken(token);
     
     // Get user ID from standard 'sub' claim
     const userId = decoded.sub;
     
     if (!userId) {
-      throw new Error('Invalid token: user ID not found');
+      return {
+        success: false,
+        error: 'Invalid token: user ID not found',
+      };
     }
     
     // Fetch full user details from database
-    const user = await getUserWithCompanies(userId);
+    const userResult = await getUserWithCompanies(userId);
     
-    if (!user) {
-      throw new Error('User not found');
+    if (!userResult.success || !userResult.result) {
+      return {
+        success: false,
+        error: 'User not found',
+      };
     }
     
+    const user = userResult.result;
+    
     return {
-      user,
-      userId: userId,
-      email: user.email,
-      userType: user.user_type,
-      systemRole: user.user_type === 'system_admin' ? user.system_role : null,
-      companies: user.companies || [],
+      success: true,
+      result: {
+        user,
+        userId: userId,
+        email: user.email,
+        userType: user.user_type,
+        systemRole: user.user_type === 'system_admin' ? user.system_role : null,
+        companies: user.companies || [],
+      },
     };
-  },
-};
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to create auth context',
+    };
+  }
+}
 

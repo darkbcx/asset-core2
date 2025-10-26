@@ -20,6 +20,178 @@ AssetCore follows comprehensive coding standards to ensure consistent, secure, a
 
 ## Core Development Patterns
 
+### API Route Layer Separation
+
+**API routes MUST NOT execute direct database queries.**
+
+API routes are part of the presentation layer and should only handle HTTP concerns:
+- Request validation
+- Response formatting
+- Error handling
+- HTTP status codes
+
+**All database operations MUST be delegated to backend repository functions.**
+
+```typescript
+// ✅ CORRECT: API route delegates to backend functions
+import { NextRequest, NextResponse } from 'next/server';
+import { getUserById } from '@/backend/user';
+
+export async function GET(request: NextRequest) {
+  const userId = request.params.id;
+  const result = await getUserById(userId);
+  
+  if (!result.success) {
+    return NextResponse.json(
+      { error: result.error },
+      { status: 404 }
+    );
+  }
+  
+  return NextResponse.json({ user: result.result });
+}
+
+// ❌ WRONG: Direct database query in API route
+import { db } from '@/lib/db';
+
+export async function GET(request: NextRequest) {
+  const [users] = await db.execute('SELECT * FROM users WHERE id = ?', [userId]);
+  return NextResponse.json({ user: users[0] });
+}
+```
+
+**When creating new functionality:**
+1. If a backend function exists, use it
+2. If no backend function exists, create one in the appropriate repository
+3. Never add database queries directly in API routes
+
+### Backend Response Pattern
+
+**All backend functions MUST return a standardized response object:**
+
+```typescript
+// Standard response interface (defined in src/backend/types.ts)
+interface BackendResponse<T> {
+  success: boolean;
+  result?: T;
+  error?: string;
+}
+```
+
+#### Implementation Rules
+
+**1. Success Responses:**
+- Set `success: true`
+- Include data in `result` field
+- Omit `error` field
+
+**2. Error Responses:**
+- Set `success: false`
+- Include error message in `error` field
+- Omit `result` field
+
+**3. Example Implementation:**
+
+```typescript
+// ✅ CORRECT: Standard BackendResponse pattern
+import type { BackendResponse } from '@/backend/types';
+
+export async function getUserById(userId: string): Promise<BackendResponse<User>> {
+  try {
+    const user = await db.queryOne<User>(query, [userId]);
+    
+    if (!user) {
+      return {
+        success: false,
+        error: 'User not found',
+      };
+    }
+    
+    return {
+      success: true,
+      result: user,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to get user',
+    };
+  }
+}
+
+// ✅ CORRECT: Calling backend functions
+const userResult = await getUserById(userId);
+if (!userResult.success || !userResult.result) {
+  return {
+    success: false,
+    error: userResult.error || 'User not found',
+  };
+}
+const user = userResult.result; // Extract from result
+
+// ❌ WRONG: Returning direct values or throwing errors
+export async function getUserById(userId: string): Promise<User | null> {
+  const user = await db.queryOne<User>(query, [userId]);
+  return user; // Don't return direct values
+}
+
+export async function getUserById(userId: string): Promise<User> {
+  const user = await db.queryOne<User>(query, [userId]);
+  if (!user) {
+    throw new Error('User not found'); // Don't throw errors
+  }
+  return user;
+}
+```
+
+#### Benefits
+
+- **Consistent Error Handling**: All functions follow the same pattern
+- **Type Safety**: Clear typing for success and error cases
+- **Easy Testing**: Predictable response structure
+- **Better UX**: Consistent error messages across the application
+- **No Exception Propagation**: Eliminates need for try-catch in every caller
+
+#### Function Organization Rules
+
+**Export standalone functions when:**
+- Return `BackendResponse<T>` pattern
+- Are core business logic functions
+- Have important roles in the module
+
+**Export grouped utility objects when:**
+- Small, pure utility functions
+- Don't return `BackendResponse`
+- Used for transformations or parsing
+- Multiple related small helpers
+
+```typescript
+// ✅ CORRECT: Standalone function (returns BackendResponse)
+export async function getUserById(userId: string): Promise<BackendResponse<User>> {
+  // ... implementation
+}
+
+// ✅ CORRECT: Standalone utility function (simple parsing)
+export function extractTokenFromHeader(authHeader: string | null): string | null {
+  if (!authHeader) return null;
+  const parts = authHeader.split(' ');
+  return parts.length === 2 && parts[0] === 'Bearer' ? parts[1] : null;
+}
+
+// ✅ CORRECT: Grouped utilities (multiple small helpers)
+export const tokenUtils = {
+  extractFromHeader(authHeader: string | null): string | null { /* ... */ },
+  validateFormat(token: string): boolean { /* ... */ },
+  decodeWithoutVerify(token: string): Record<string, unknown> { /* ... */ },
+};
+
+// ❌ WRONG: Grouping core business logic
+export const authActions = {
+  async login(credentials: Login): Promise<BackendResponse<AuthResponse>> { /* ... */ },
+  async refreshToken(token: string): Promise<BackendResponse<RefreshTokenResponse>> { /* ... */ },
+};
+```
+
 ### Pure Functions
 
 AssetCore emphasizes the use of pure functions for business logic and data operations.
@@ -232,6 +404,17 @@ type T = 'operational' | 'inactive';      // Use descriptive name
 - **Security**: Secure coding practices and input validation
 - **Maintainability**: Clean, readable code with clear structure
 - **Performance**: Optimized patterns for backend and database operations
+- **Standardized Responses**: All backend functions return `BackendResponse<T>` for consistent error handling
+
+### Core Patterns
+
+1. **Layer Separation**: API routes delegate to backend functions; never execute direct database queries
+2. **BackendResponse Pattern**: All backend functions return `{ success: boolean; result?: T; error?: string }`
+3. **Function Organization**: Core business logic exports as standalone functions; small utilities can be grouped
+4. **Pure Functions**: Use pure functions for business logic, avoid classes unless needed
+5. **Schema Validation**: Use Zod schemas as single source of truth for types and validation
+6. **Naming Conventions**: Follow consistent naming patterns (camelCase for variables/functions, PascalCase for types)
+7. **Error Handling**: Return error objects instead of throwing exceptions
 
 ### Benefits
 
@@ -240,3 +423,4 @@ type T = 'operational' | 'inactive';      // Use descriptive name
 - **Security**: Secure coding practices and input validation
 - **Maintainability**: Clean, readable code with clear structure
 - **Performance**: Optimized patterns for backend and database operations
+- **Predictable Error Handling**: Standardized response pattern eliminates exception propagation

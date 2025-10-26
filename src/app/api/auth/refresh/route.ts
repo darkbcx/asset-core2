@@ -26,17 +26,17 @@ export async function POST(request: NextRequest) {
     const response = NextResponse.json({
       success: true,
       user: {
-        id: result.user.id,
-        email: result.user.email,
-        firstName: result.user.first_name,
-        lastName: result.user.last_name,
-        userType: result.user.user_type,
-        systemRole: result.user.system_role,
+        id: result.result!.user.id,
+        email: result.result!.user.email,
+        firstName: result.result!.user.first_name,
+        lastName: result.result!.user.last_name,
+        userType: result.result!.user.user_type,
+        systemRole: result.result!.user.system_role,
       },
     });
     
     // Set new token cookie
-    response.cookies.set('token', result.token, {
+    response.cookies.set('token', result.result!.token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',

@@ -14,6 +14,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { db } from '@/lib/db';
 import { updateUserSchema, createUserCompanySchema, updateUserCompanySchema } from '@/lib/validators/user';
 import type { User, UserCompany, UserWithCompanies, CreateUser, UpdateUser, CreateUserCompany, UpdateUserCompany } from '@/lib/validators/user';
+import type { BackendResponse } from '@/backend/types';
 
 /**
  * Check if user is a system administrator
@@ -106,12 +107,31 @@ export async function createUser(userData: CreateUser, passwordHash: string): Pr
  * @param userId - User ID
  * @returns User or null if not found
  */
-export async function getUserById(userId: string): Promise<User | null> {
-  const query = `
-    SELECT * FROM users WHERE id = ?
-  `;
-  
-  return await db.queryOne<User>(query, [userId]);
+export async function getUserById(userId: string): Promise<BackendResponse<User>> {
+  try {
+    const query = `
+      SELECT * FROM users WHERE id = ?
+    `;
+    
+    const user = await db.queryOne<User>(query, [userId]);
+    
+    if (!user) {
+      return {
+        success: false,
+        error: 'User not found',
+      };
+    }
+    
+    return {
+      success: true,
+      result: user,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to get user',
+    };
+  }
 }
 
 /**
@@ -120,12 +140,31 @@ export async function getUserById(userId: string): Promise<User | null> {
  * @param email - User email
  * @returns User or null if not found
  */
-export async function getUserByEmail(email: string): Promise<User | null> {
-  const query = `
-    SELECT * FROM users WHERE email = ?
-  `;
-  
-  return await db.queryOne<User>(query, [email]);
+export async function getUserByEmail(email: string): Promise<BackendResponse<User>> {
+  try {
+    const query = `
+      SELECT * FROM users WHERE email = ?
+    `;
+    
+    const user = await db.queryOne<User>(query, [email]);
+    
+    if (!user) {
+      return {
+        success: false,
+        error: 'User not found',
+      };
+    }
+    
+    return {
+      success: true,
+      result: user,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to get user by email',
+    };
+  }
 }
 
 /**
@@ -134,19 +173,32 @@ export async function getUserByEmail(email: string): Promise<User | null> {
  * @param userId - User ID
  * @returns User with companies or null if not found
  */
-export async function getUserWithCompanies(userId: string): Promise<UserWithCompanies | null> {
-  const user = await getUserById(userId);
-  
-  if (!user) {
-    return null;
+export async function getUserWithCompanies(userId: string): Promise<BackendResponse<UserWithCompanies>> {
+  try {
+    const userResult = await getUserById(userId);
+    
+    if (!userResult.success || !userResult.result) {
+      return {
+        success: false,
+        error: userResult.error || 'User not found',
+      };
+    }
+    
+    const companies = await getUserCompaniesByUserId(userId);
+    
+    return {
+      success: true,
+      result: {
+        ...userResult.result,
+        companies,
+      },
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to get user with companies',
+    };
   }
-  
-  const companies = await getUserCompaniesByUserId(userId);
-  
-  return {
-    ...user,
-    companies,
-  };
 }
 
 /**
@@ -155,18 +207,21 @@ export async function getUserWithCompanies(userId: string): Promise<UserWithComp
  * @param userId - User ID
  * @param userData - User update data
  * @returns Updated user
- * @throws Error if user not found or validation fails
  */
-export async function updateUser(userId: string, userData: UpdateUser): Promise<User> {
-  // Validate input
-  const validatedData = updateUserSchema.parse(userData);
-  
-  // Check if user exists
-  const existingUser = await getUserById(userId);
-  
-  if (!existingUser) {
-    throw new Error('User not found');
-  }
+export async function updateUser(userId: string, userData: UpdateUser): Promise<BackendResponse<User>> {
+  try {
+    // Validate input
+    const validatedData = updateUserSchema.parse(userData);
+    
+    // Check if user exists
+    const existingUserResult = await getUserById(userId);
+    
+    if (!existingUserResult.success) {
+      return {
+        success: false,
+        error: existingUserResult.error || 'User not found',
+      };
+    }
   
   // Build update query dynamically based on provided fields
   const updates: string[] = [];
@@ -184,9 +239,12 @@ export async function updateUser(userId: string, userData: UpdateUser): Promise<
   
   if (validatedData.email !== undefined) {
     // Check if email is already taken by another user
-    const userWithEmail = await getUserByEmail(validatedData.email);
-    if (userWithEmail && userWithEmail.id !== userId) {
-      throw new Error('Email already registered');
+    const userWithEmailResult = await getUserByEmail(validatedData.email);
+    if (userWithEmailResult.success && userWithEmailResult.result && userWithEmailResult.result.id !== userId) {
+      return {
+        success: false,
+        error: 'Email already registered',
+      };
     }
     updates.push('email = ?');
     params.push(validatedData.email);
@@ -223,13 +281,25 @@ export async function updateUser(userId: string, userData: UpdateUser): Promise<
   await db.execute(query, params);
   
   // Fetch and return updated user
-  const updatedUser = await getUserById(userId);
+  const updatedUserResult = await getUserById(userId);
   
-  if (!updatedUser) {
-    throw new Error('Failed to retrieve updated user');
+  if (!updatedUserResult.success) {
+    return {
+      success: false,
+      error: updatedUserResult.error || 'Failed to retrieve updated user',
+    };
   }
   
-  return updatedUser;
+  return {
+    success: true,
+    result: updatedUserResult.result!,
+  };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to update user',
+    };
+  }
 }
 
 /**
