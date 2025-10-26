@@ -27,6 +27,22 @@ AssetCore's design system prioritizes clarity, efficiency, and accessibility for
 - **Operations Supervisors**: Real-time monitoring, performance metrics, executive reporting
 - **System Administrators**: Configuration interfaces, multi-tenant management, system controls
 
+### Landing Page Design
+
+**Purpose:** Simple welcome page serving as the entry point for authentication and user onboarding.
+
+**Core Elements:**
+- **Welcome Message**: Clear, concise value proposition
+- **Authentication Buttons**: Primary "Sign In" and secondary "Sign Up" or "Get Started"
+- **Minimal Design**: Clean, uncluttered interface focusing on conversion
+- **Brand Identity**: Subtle brand elements and asset management context
+
+**Design Principles:**
+- **Single Focus**: Direct user attention to authentication actions
+- **Trust Building**: Professional, enterprise-ready aesthetic
+- **Accessibility**: Full keyboard navigation and screen reader support
+- **Mobile First**: Responsive design prioritizing mobile experience
+
 ## Visual Design System
 
 ### Color Palette
@@ -73,12 +89,12 @@ const statusColors = {
 
 ```css
 /* Typography Scale */
-.text-xs { font-size: 0.75rem; line-height: 1rem; }      /* 12px - Helper text */
-.text-sm { font-size: 0.875rem; line-height: 1.25rem; } /* 14px - Body small */
-.text-base { font-size: 1rem; line-height: 1.5rem; }     /* 16px - Body text */
-.text-lg { font-size: 1.125rem; line-height: 1.75rem; }  /* 18px - Headings */
-.text-xl { font-size: 1.25rem; line-height: 1.75rem; }   /* 20px - Section titles */
-.text-2xl { font-size: 1.5rem; line-height: 2rem; }      /* 24px - Page titles */
+.text-xs { font-size: 0.75rem; line-height: 1rem; }       /* 12px - Helper text */
+.text-sm { font-size: 0.875rem; line-height: 1.25rem; }   /* 14px - Body small */
+.text-base { font-size: 1rem; line-height: 1.5rem; }      /* 16px - Body text */
+.text-lg { font-size: 1.125rem; line-height: 1.75rem; }   /* 18px - Headings */
+.text-xl { font-size: 1.25rem; line-height: 1.75rem; }    /* 20px - Section titles */
+.text-2xl { font-size: 1.5rem; line-height: 2rem; }       /* 24px - Page titles */
 .text-3xl { font-size: 1.875rem; line-height: 2.25rem; }  /* 30px - Hero headings */
 ```
 
@@ -95,12 +111,12 @@ const statusColors = {
 
 ```css
 /* Spacing Scale (Tailwind-based) */
-.space-1 { gap: 0.25rem; }   /* 4px - Tight grouping */
-.space-2 { gap: 0.5rem; }    /* 8px - Related elements */
+.space-1 { gap: 0.25rem; }    /* 4px - Tight grouping */
+.space-2 { gap: 0.5rem; }     /* 8px - Related elements */
 .space-3 { gap: 0.75rem; }    /* 12px - Default spacing */
-.space-4 { gap: 1rem; }      /* 16px - Section separation */
-.space-6 { gap: 1.5rem; }    /* 24px - Major sections */
-.space-8 { gap: 2rem; }      /* 32px - Layout sections */
+.space-4 { gap: 1rem; }       /* 16px - Section separation */
+.space-6 { gap: 1.5rem; }     /* 24px - Major sections */
+.space-8 { gap: 2rem; }       /* 32px - Layout sections */
 ```
 
 **Container Spacing:**
@@ -133,10 +149,10 @@ const statusColors = {
 ```typescript
 // Breakpoint system (Tailwind)
 const breakpoints = {
-  sm: '640px',   // Mobile landscape
-  md: '768px',   // Tablet portrait
-  lg: '1024px',  // Tablet landscape
-  xl: '1280px',  // Desktop
+  sm: '640px',    // Mobile landscape
+  md: '768px',    // Tablet portrait
+  lg: '1024px',   // Tablet landscape
+  xl: '1280px',   // Desktop
   '2xl': '1536px' // Large desktop
 };
 
