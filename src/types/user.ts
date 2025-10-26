@@ -24,6 +24,7 @@ export interface User {
   is_active: boolean;
   last_login: Date | null;
   password_hash: string;
+  system_permissions: PermissionSet | null;
   created_at: Date;
   updated_at: Date;
 }

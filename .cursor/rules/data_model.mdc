@@ -48,24 +48,26 @@ AssetCore implements a comprehensive database schema designed for multi-tenant a
 
 **Purpose:** System users with role-based access control supporting both tenant-specific users and platform-wide system administrators.
 
-| Field           | Type         | Description                           | Constraints      |
-| --------------- | ------------ | ------------------------------------- | ---------------- |
-| `id`            | UUID         | Primary key                           | NOT NULL, UNIQUE |
-| `user_type`     | VARCHAR(20)  | User type: 'tenant' or 'system_admin' | NOT NULL         |
-| `system_role`   | VARCHAR(50)  | System role (only for system_admin)  | NULLABLE         |
-| `email`         | VARCHAR(255) | User email address                    | NOT NULL, UNIQUE |
-| `first_name`    | VARCHAR(100) | User's first name                     | NOT NULL         |
-| `last_name`     | VARCHAR(100) | User's last name                      | NOT NULL         |
-| `is_active`     | BOOLEAN      | Account status                        | DEFAULT true     |
-| `last_login`    | TIMESTAMP    | Last login timestamp                  | NULLABLE         |
-| `password_hash` | VARCHAR(255) | Hashed password for authentication    | NOT NULL         |
-| `created_at`    | TIMESTAMP    | Creation timestamp                    | NOT NULL         |
-| `updated_at`    | TIMESTAMP    | Last update timestamp                 | NOT NULL         |
+| Field                | Type         | Description                           | Constraints      |
+| -------------------- | ------------ | ------------------------------------- | ---------------- |
+| `id`                 | UUID         | Primary key                           | NOT NULL, UNIQUE |
+| `user_type`          | VARCHAR(20)  | User type: 'tenant' or 'system_admin' | NOT NULL         |
+| `system_role`        | VARCHAR(50)  | System role (only for system_admin)   | NULLABLE         |
+| `system_permissions` | JSONB        | System administrator permissions      | NULLABLE         |
+| `email`              | VARCHAR(255) | User email address                    | NOT NULL, UNIQUE |
+| `first_name`         | VARCHAR(100) | User's first name                     | NOT NULL         |
+| `last_name`          | VARCHAR(100) | User's last name                      | NOT NULL         |
+| `is_active`          | BOOLEAN      | Account status                        | DEFAULT true     |
+| `last_login`         | TIMESTAMP    | Last login timestamp                  | NULLABLE         |
+| `password_hash`      | VARCHAR(255) | Hashed password for authentication    | NOT NULL         |
+| `created_at`         | TIMESTAMP    | Creation timestamp                    | NOT NULL         |
+| `updated_at`         | TIMESTAMP    | Last update timestamp                 | NOT NULL         |
 
 **Key Features:**
 
 - **Dual User Types**: Supports both tenant users and system administrators
 - **System Roles**: For system administrators, the `system_role` field distinguishes between 'Super Administrator' and 'Support Administrator'
+- **System Permissions**: The `system_permissions` field stores granular permissions for system administrators (stored as JSONB)
 - **Multi-Company Support**: Users can be associated with multiple companies via UserCompany
 - **Security Features**: Password hashing and login tracking
 - **Soft Delete**: Account deactivation with is_active flag
@@ -122,8 +124,10 @@ System administrators are identified by `user_type = 'system_admin'` and differe
 - Each user can have only one primary company (`is_primary = true`)
 - System administrators (user_type = 'system_admin') have no UserCompany records
 - System administrators must have a `system_role` field value ('super_admin' or 'support_admin')
-- Tenant users (user_type = 'tenant') must have `system_role = NULL`
+- System administrators store permissions in the User table's `system_permissions` field
+- Tenant users (user_type = 'tenant') must have `system_role = NULL` and `system_permissions = NULL` in User table
 - Tenant users (user_type = 'tenant') must have at least one UserCompany record
+- Tenant users store permissions in the UserCompany table's `permissions` field
 - Users can have different roles and permissions in different companies
 
 ## User Role Hierarchy & Permissions
@@ -184,7 +188,12 @@ The AssetCore system implements a comprehensive role-based access control system
 
 ### Permission System
 
-The `permissions` JSONB field allows for granular permission configuration:
+The system uses two different storage mechanisms for permissions:
+
+**Tenant Users** - Permissions stored in `UserCompany.permissions` field (company-specific)
+**System Administrators** - Permissions stored in `User.system_permissions` field (platform-wide)
+
+Both use the same JSONB format for granular permission configuration:
 
 ```json
 {
@@ -213,6 +222,13 @@ The `permissions` JSONB field allows for granular permission configuration:
   }
 }
 ```
+
+**For System Administrators**, permissions in the `User.system_permissions` field control:
+
+- Access to all tenant data across the platform
+- System configuration and settings management
+- Multi-tenant operations and oversight
+- Platform-wide user management
 
 ### Security Considerations
 

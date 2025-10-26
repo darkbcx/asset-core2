@@ -6,21 +6,6 @@
 
 import { z } from 'zod';
 
-// Base user schema
-export const userSchema = z.object({
-  id: z.string().uuid(),
-  user_type: z.enum(['tenant', 'system_admin']),
-  system_role: z.enum(['super_admin', 'support_admin']).nullable(),
-  email: z.string().email(),
-  first_name: z.string().min(1).max(100),
-  last_name: z.string().min(1).max(100),
-  is_active: z.boolean(),
-  last_login: z.date().nullable(),
-  password_hash: z.string().min(1),
-  created_at: z.date(),
-  updated_at: z.date(),
-});
-
 // User type definitions
 export const userTypeSchema = z.enum(['tenant', 'system_admin']);
 export const systemRoleSchema = z.enum(['super_admin', 'support_admin']).nullable();
@@ -36,6 +21,22 @@ export const permissionSetSchema = z.record(
   z.string(),
   z.record(z.string(), z.boolean())
 );
+
+// Base user schema
+export const userSchema = z.object({
+  id: z.string().uuid(),
+  user_type: z.enum(['tenant', 'system_admin']),
+  system_role: z.enum(['super_admin', 'support_admin']).nullable(),
+  email: z.string().email(),
+  first_name: z.string().min(1).max(100),
+  last_name: z.string().min(1).max(100),
+  is_active: z.boolean(),
+  last_login: z.date().nullable(),
+  password_hash: z.string().min(1),
+  system_permissions: permissionSetSchema.nullable(),
+  created_at: z.date(),
+  updated_at: z.date(),
+});
 
 // UserCompany schema
 export const userCompanySchema = z.object({
@@ -59,6 +60,7 @@ export const createUserSchema = z.object({
   last_name: z.string().min(1).max(100),
   user_type: userTypeSchema,
   system_role: systemRoleSchema.optional(),
+  system_permissions: permissionSetSchema.optional(),
 });
 
 // Update user schema
@@ -68,6 +70,7 @@ export const updateUserSchema = z.object({
   email: z.string().email().optional(),
   is_active: z.boolean().optional(),
   system_role: systemRoleSchema.optional(),
+  system_permissions: permissionSetSchema.optional(),
 });
 
 // Login schema
