@@ -6,7 +6,14 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "db:init": "tsx database/scripts/init-db.ts",
+    "db:migrate": "tsx database/scripts/db-utils.ts migrate",
+    "db:seed": "tsx database/scripts/db-utils.ts seed",
+    "db:reset": "tsx database/scripts/db-utils.ts reset",
+    "db:backup": "tsx database/scripts/db-utils.ts backup",
+    "db:status": "tsx database/scripts/db-utils.ts status",
+    "db:help": "tsx database/scripts/db-utils.ts"
   },
   "dependencies": {
     "dotenv": "^17.2.3",
@@ -25,6 +32,7 @@
     "eslint": "^9",
     "eslint-config-next": "15.5.6",
     "tailwindcss": "^4",
+    "tsx": "^4.20.6",
     "typescript": "^5"
   },
   "main": "index.js",
