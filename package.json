@@ -13,8 +13,10 @@
     "reset:full": "tsx database/scripts/reset.ts --full"
   },
   "dependencies": {
+    "@types/jsonwebtoken": "^9.0.10",
     "bcrypt": "^6.0.0",
     "dotenv": "^17.2.3",
+    "jsonwebtoken": "^9.0.2",
     "mysql2": "^3.15.3",
     "next": "15.5.6",
     "react": "19.1.0",
