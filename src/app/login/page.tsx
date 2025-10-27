@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
 import { LogIn, Loader2 } from "lucide-react";
-import { setActiveCompanyCookie } from "@/lib/cookies";
+import { setActiveCompanyCookie, setRefreshTokenCookie, setTokenCookie } from "@/lib/cookies";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -48,13 +48,10 @@ export default function LoginPage() {
 
       // Store token and refresh token client-side
       if (result.token) {
-        localStorage.setItem("token", result.token);
+        setTokenCookie(result.token, result.expiresIn);
       }
       if (result.refreshToken) {
-        localStorage.setItem("refreshToken", result.refreshToken);
-      }
-      if (result.expiresIn) {
-        localStorage.setItem("tokenExpiresIn", result.expiresIn.toString());
+        setRefreshTokenCookie(result.refreshToken, result.expiresIn);
       }
 
       // Check user type and redirect accordingly

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken, createAuthContext } from '@/backend/authentication';
+import { getUserCompaniesWithDetails } from '@/backend/user';
 
 export async function GET(request: NextRequest) {
   try {
@@ -36,6 +37,30 @@ export async function GET(request: NextRequest) {
     
     const { user, companies } = authContextResult.result;
     
+    // For tenant users, get companies with details (name, slug)
+    let companiesWithDetails: Array<{
+      company_id: string;
+      company_name?: string;
+      company_slug?: string;
+      role: string;
+      permissions: Record<string, Record<string, boolean>>;
+      is_primary: boolean;
+      is_active: boolean;
+    }> = companies;
+    
+    if (user.user_type === 'tenant') {
+      const companiesDetails = await getUserCompaniesWithDetails(user.id);
+      companiesWithDetails = companiesDetails.map((comp) => ({
+        company_id: comp.company_id,
+        company_name: comp.company_name,
+        company_slug: comp.company_slug,
+        role: comp.role,
+        permissions: comp.permissions,
+        is_primary: comp.is_primary,
+        is_active: comp.is_active,
+      }));
+    }
+    
     return NextResponse.json({
       success: true,
       user: {
@@ -46,7 +71,7 @@ export async function GET(request: NextRequest) {
         userType: user.user_type,
         systemRole: user.system_role,
       },
-      companies,
+      companies: companiesWithDetails,
     });
   } catch (error) {
     console.error('Get user info error:', error);

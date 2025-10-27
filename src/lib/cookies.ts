@@ -44,8 +44,8 @@ export function removeActiveCompanyCookie(): void {
 /**
  * Set authentication token in cookie
  */
-export function setTokenCookie(token: string): void {
-  document.cookie = `${TOKEN_COOKIE_NAME}=${token}; path=/; max-age=${TOKEN_MAX_AGE}; SameSite=Lax`;
+export function setTokenCookie(token: string, expiresIn?: number|null): void {
+  document.cookie = `${TOKEN_COOKIE_NAME}=${token}; path=/; max-age=${expiresIn ?? TOKEN_MAX_AGE}; SameSite=Lax`;
 }
 
 /**
@@ -74,8 +74,8 @@ export function removeTokenCookie(): void {
 /**
  * Set refresh token in cookie
  */
-export function setRefreshTokenCookie(refreshToken: string): void {
-  document.cookie = `${REFRESH_TOKEN_COOKIE_NAME}=${refreshToken}; path=/; max-age=${TOKEN_MAX_AGE}; SameSite=Lax`;
+export function setRefreshTokenCookie(refreshToken: string, expiresIn?: number|null): void {
+  document.cookie = `${REFRESH_TOKEN_COOKIE_NAME}=${refreshToken}; path=/; max-age=${expiresIn ?? TOKEN_MAX_AGE}; SameSite=Lax`;
 }
 
 /**
@@ -109,4 +109,5 @@ export function clearAuthCookies(): void {
   removeRefreshTokenCookie();
   removeActiveCompanyCookie();
 }
+
 

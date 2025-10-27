@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { LayoutDashboard, Building2, Users, Settings, Activity, Shield, LogOut, ArrowLeft } from "lucide-react";
+import { handleLogout } from "@/lib/auth";
 import {
   Sidebar,
   SidebarContent,
@@ -24,6 +25,11 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
+
+  const onLogout = () => {
+    handleLogout(router);
+  };
 
   const menuItems = [
     {
@@ -116,11 +122,9 @@ export default function AdminLayout({
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
-              <SidebarMenuButton asChild tooltip="Sign Out">
-                <Link href="/login">
-                  <LogOut />
-                  <span>Sign Out</span>
-                </Link>
+              <SidebarMenuButton onClick={onLogout} tooltip="Sign Out">
+                <LogOut />
+                <span>Sign Out</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
