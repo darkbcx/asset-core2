@@ -81,14 +81,17 @@ AssetCore implements a custom authentication system using username/password cred
    - Display appropriate error messages
 
 2. **Token Storage**
-   - Store JWT token in secure HTTP-only cookies
-   - Configure cookie with appropriate security flags
-   - Set expiration based on token lifetime
+   - **Prefer cookies over localStorage**: Always use cookies for client-side storage instead of localStorage
+   - Store JWT token in cookies (document.cookie) for better security and SSR compatibility
+   - Client manages token storage and expiration
+   - API routes return tokens in response body; client handles storage
+   - Send token in Authorization header for authenticated requests
+   - Use utility functions from `@/lib/cookies` for consistent cookie management
 
 3. **Company Selection (Multi-Company Users)**
    - Check if user has access to multiple companies
-   - If multiple companies: redirect to `/select-company` page
-   - If single company: set active company cookie automatically
+   - If multiple companies: redirect to `/select-company` page (user selects company, stored in client-side storage)
+   - If single company: store active company ID in client-side storage automatically
    - If system admin: proceed to admin dashboard (no company selection)
 
 #### Token Refresh Flow
@@ -109,9 +112,10 @@ AssetCore implements a custom authentication system using username/password cred
 
 2. **Company Selection**
    - User selects a company from the list
-   - Store selected company in `active_company_id` cookie
-   - Cookie is HTTP-only for security
-   - Set cookie expiration (7 days)
+   - Store selected company ID in cookies (never use localStorage)
+   - Use `setActiveCompanyCookie()` from `@/lib/cookies` utility
+   - Client manages active company state
+   - Send company ID in request headers or body when needed
 
 3. **Redirect to Dashboard**
    - After selection, redirect to `/dashboard`
@@ -120,16 +124,21 @@ AssetCore implements a custom authentication system using username/password cred
 
 #### Logout Process
 1. **Token Cleanup**
-   - Remove JWT token from cookies
-   - Remove active company cookie
-   - Clear any client-side token storage
+   - Remove JWT token from cookies using cookie utility functions
+   - Remove active company ID from cookies using `removeActiveCompanyCookie()` from `@/lib/cookies`
+   - Call logout API endpoint (optional - for server-side cleanup)
    - Redirect to login page
 
 ### Security Best Practices
 
-- Use HTTP-only cookies for token storage
+- **Always use cookies over localStorage**: Prefer cookies for better security and SSR compatibility
+- Store tokens securely in cookies using `document.cookie` or cookie utility functions
+- Use cookie utility functions from `@/lib/cookies` for consistent cookie management
+- Send tokens in Authorization header for API requests
 - Implement automatic token refresh
 - Handle token expiration gracefully
-- Clear tokens on logout
+- Clear tokens on logout using cookie removal functions
 - Validate tokens on every API request
+- Never expose tokens in URLs or client-side code comments
+- **Never use localStorage**: Avoid localStorage for sensitive data like tokens and active company IDs
 

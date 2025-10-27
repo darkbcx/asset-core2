@@ -3,7 +3,9 @@ import { verifyToken, createAuthContext } from '@/backend/authentication';
 
 export async function GET(request: NextRequest) {
   try {
-    const token = request.cookies.get('token')?.value;
+    // Get token from Authorization header
+    const authHeader = request.headers.get('authorization');
+    const token = authHeader?.replace('Bearer ', '');
     
     if (!token) {
       return NextResponse.json(

@@ -19,9 +19,12 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // Create HTTP-only cookie for the JWT token
-    const response = NextResponse.json({
+    // Return token in response body - client will manage it
+    return NextResponse.json({
       success: true,
+      token: result.result!.token,
+      refreshToken: result.result!.refreshToken,
+      expiresIn: result.result!.expiresIn,
       user: {
         id: result.result!.user.id,
         email: result.result!.user.email,
@@ -32,16 +35,6 @@ export async function POST(request: NextRequest) {
       },
       companies: result.result!.companies,
     });
-    
-    response.cookies.set('token', result.result!.token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 7, // 7 days
-      path: '/',
-    });
-    
-    return response;
   } catch (error) {
     if (error instanceof Error && error.name === 'ZodError') {
       return NextResponse.json(

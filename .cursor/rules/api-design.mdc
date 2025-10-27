@@ -27,6 +27,7 @@ AssetCore follows RESTful API design principles to provide a consistent, scalabl
 - **Token Validation**: All protected endpoints validate JWT tokens
 - **Permission Model**: Role-based access control (RBAC)
 - **Multi-tenancy**: Company-scoped data access enforcement
+- **Stateless Design**: API routes do not read or write cookies; tokens managed client-side
 
 ### Request/Response Standards
 
@@ -151,6 +152,38 @@ All resources are organized under company scope to ensure proper data isolation:
 - `sort=field1,field2`: Multiple field sorting
 
 ## Security Considerations
+
+### Stateless API Design
+
+**API routes MUST be stateless and not manage cookies or server-side session state.**
+
+- **No Cookie Management**: API routes do not read or write cookies
+- **Client-Managed Tokens**: Tokens are returned in response bodies for client to manage
+- **Authorization Header**: Tokens sent via `Authorization: Bearer <token>` header
+- **Stateless Requests**: Each request is independent and self-contained
+- **Horizontal Scaling**: Stateless design enables easy horizontal scaling
+
+```typescript
+// ✅ CORRECT: Token in Authorization header
+const response = await fetch('/api/assets', {
+  headers: {
+    'Authorization': `Bearer ${token}`,
+    'Content-Type': 'application/json',
+  },
+});
+
+// ✅ CORRECT: Return token in response body
+return NextResponse.json({
+  success: true,
+  token: result.token,
+  refreshToken: result.refreshToken,
+});
+
+// ❌ WRONG: Reading/writing cookies in API routes
+const cookieStore = await cookies();
+const token = cookieStore.get('token')?.value; // ❌ DON'T
+response.cookies.set('token', token); // ❌ DON'T
+```
 
 ### Data Protection
 - **Input Validation**: Comprehensive validation of all input data using Zod schemas

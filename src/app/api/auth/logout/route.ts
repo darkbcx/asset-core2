@@ -2,30 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest) {
   try {
-    const response = NextResponse.json({
+    // Return success - client will clear tokens from localStorage
+    return NextResponse.json({
       success: true,
       message: 'Logged out successfully',
     });
-    
-    // Clear authentication cookies
-    response.cookies.set('token', '', {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 0,
-      path: '/',
-    });
-    
-    // Clear active company cookie if it exists
-    response.cookies.set('active_company_id', '', {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 0,
-      path: '/',
-    });
-    
-    return response;
   } catch (error) {
     console.error('Logout error:', error);
     return NextResponse.json(

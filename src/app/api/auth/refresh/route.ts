@@ -3,11 +3,12 @@ import { refreshToken } from '@/backend/authentication';
 
 export async function POST(request: NextRequest) {
   try {
-    const token = request.cookies.get('token')?.value;
+    const body = await request.json();
+    const token = body.refreshToken;
     
     if (!token) {
       return NextResponse.json(
-        { error: 'No token provided' },
+        { error: 'No refresh token provided' },
         { status: 401 }
       );
     }
@@ -22,9 +23,12 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // Return new token in response
-    const response = NextResponse.json({
+    // Return new tokens in response - client will manage them
+    return NextResponse.json({
       success: true,
+      token: result.result!.token,
+      refreshToken: result.result!.refreshToken,
+      expiresIn: result.result!.expiresIn,
       user: {
         id: result.result!.user.id,
         email: result.result!.user.email,
@@ -34,17 +38,6 @@ export async function POST(request: NextRequest) {
         systemRole: result.result!.user.system_role,
       },
     });
-    
-    // Set new token cookie
-    response.cookies.set('token', result.result!.token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 7, // 7 days
-      path: '/',
-    });
-    
-    return response;
   } catch (error) {
     console.error('Token refresh error:', error);
     return NextResponse.json(

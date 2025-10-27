@@ -65,6 +65,98 @@ export async function GET(request: NextRequest) {
 2. If no backend function exists, create one in the appropriate repository
 3. Never add database queries directly in API routes
 
+### Stateless API Design
+
+**API routes MUST be stateless and not maintain any server-side session state or cookie management.**
+
+Next.js API routes should follow RESTful principles:
+- **No Server-Side Sessions**: Do not store session data in memory or server-side state
+- **Stateless Requests**: Each request contains all necessary information
+- **No Cookie Management**: API routes MUST NOT read or write cookies
+- **Client-Managed Tokens**: Tokens are sent to the client and managed client-side in cookies (prefer cookies over localStorage)
+- **Token-Based Auth**: Use JWT tokens sent in Authorization header or request body
+
+**Cookie Usage:**
+- ❌ **WRONG**: Reading cookies in API routes
+- ❌ **WRONG**: Writing/setting cookies in API routes
+- ❌ **WRONG**: Maintaining server-side session stores
+- ❌ **WRONG**: Storing session data in memory or global variables
+- ✅ **CORRECT**: Returning tokens in response body for client to manage
+- ✅ **CORRECT**: Reading tokens from Authorization header or request body
+
+```typescript
+// ✅ CORRECT: Stateless API route with token from Authorization header
+import { NextRequest, NextResponse } from 'next/server';
+import { verifyToken } from '@/backend/authentication';
+
+export async function GET(request: NextRequest) {
+  // Read token from Authorization header (stateless)
+  const authHeader = request.headers.get('authorization');
+  const token = authHeader?.replace('Bearer ', '');
+  
+  if (!token) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  
+  // Verify token (stateless - no server-side session lookup)
+  const decoded = verifyToken(token);
+  
+  // Process request with token claims
+  const result = await getData(decoded.sub);
+  
+  return NextResponse.json({ data: result });
+}
+
+// ✅ CORRECT: Returning token in response body (client manages it)
+export async function POST(request: NextRequest) {
+  const result = await authenticateUser(body);
+  
+  // Return token in response - client will store it
+  return NextResponse.json({
+    success: true,
+    token: result.token,
+    refreshToken: result.refreshToken,
+    expiresIn: result.expiresIn,
+    user: result.user,
+  });
+}
+
+// ❌ WRONG: Reading cookies in API route
+import { cookies } from 'next/headers';
+
+export async function GET(request: NextRequest) {
+  const cookieStore = await cookies();
+  const token = cookieStore.get('token')?.value; // ❌ DON'T read cookies
+  // ...
+}
+
+// ❌ WRONG: Setting cookies in API route
+export async function POST(request: NextRequest) {
+  const response = NextResponse.json({ success: true });
+  response.cookies.set('token', token); // ❌ DON'T set cookies
+  return response;
+}
+
+// ❌ WRONG: Server-side session storage (not stateless)
+const sessionStore = new Map(); // ❌ DON'T maintain server-side state
+
+export async function POST(request: NextRequest) {
+  const sessionId = generateSessionId();
+  sessionStore.set(sessionId, userData); // ❌ DON'T store in memory
+  return NextResponse.json({ sessionId });
+}
+```
+
+**Key Principles:**
+- Each API request is independent and self-contained
+- Authentication via JWT tokens in Authorization header or request body
+- Tokens are returned to client in response body
+- **Client manages token storage in cookies** (prefer cookies over localStorage)
+- Use cookie utility functions from `@/lib/cookies` for consistent storage
+- No shared server-side state between requests
+- Stateless design enables horizontal scaling
+- Complete separation: API routes handle business logic, client handles state management
+
 ### Backend Response Pattern
 
 **All backend functions MUST return a standardized response object:**
@@ -415,6 +507,7 @@ type T = 'operational' | 'inactive';      // Use descriptive name
 5. **Schema Validation**: Use Zod schemas as single source of truth for types and validation
 6. **Naming Conventions**: Follow consistent naming patterns (camelCase for variables/functions, PascalCase for types)
 7. **Error Handling**: Return error objects instead of throwing exceptions
+8. **Client-Side Storage**: Always prefer cookies over localStorage for better security and SSR compatibility
 
 ### Benefits
 

@@ -577,6 +577,74 @@ export default async function AssetsPage() {
 - ✅ Provide company switcher UI
 - ✅ Redirect to company selection if no active company
 
+### Client-Side Storage Guidelines
+
+**Always Prefer Cookies Over localStorage**
+
+AssetCore uses cookies for all client-side storage needs instead of localStorage for better security, SSR compatibility, and consistency.
+
+**Why Cookies?**
+
+- **SSR Compatibility**: Cookies are available in server components, localStorage is not
+- **Security**: Better protection against XSS attacks when configured properly
+- **Consistency**: Unified storage mechanism across client and server components
+- **Expiration**: Built-in expiration management
+- **Cross-Tab Sync**: Cookies can be shared across tabs more reliably
+
+**Implementation:**
+
+```typescript
+// ✅ CORRECT: Use cookies for client-side storage
+import { setActiveCompanyCookie, getActiveCompanyCookie, removeActiveCompanyCookie } from '@/lib/cookies';
+
+// Set cookie
+setActiveCompanyCookie(companyId);
+
+// Get cookie
+const companyId = getActiveCompanyCookie();
+
+// Remove cookie
+removeActiveCompanyCookie();
+
+// ❌ WRONG: Using localStorage
+localStorage.setItem('activeCompanyId', companyId); // ❌ DON'T use localStorage
+const companyId = localStorage.getItem('activeCompanyId'); // ❌ DON'T use localStorage
+localStorage.removeItem('activeCompanyId'); // ❌ DON'T use localStorage
+```
+
+**When to Use Cookies:**
+
+- Authentication tokens
+- Active company ID
+- User preferences
+- Session data
+- Any persistent client-side data
+
+**Cookie Utility Functions:**
+
+Use the centralized cookie utility (`@/lib/cookies`) for consistent cookie management:
+
+```typescript
+// Available functions in @/lib/cookies
+export function setActiveCompanyCookie(companyId: string): void;
+export function getActiveCompanyCookie(): string | null;
+export function removeActiveCompanyCookie(): void;
+```
+
+**Cookie Configuration:**
+
+- **Max Age**: Set appropriate expiration (default: 7 days for active company)
+- **SameSite**: Use `Lax` for most cookies to prevent CSRF
+- **Path**: Set to `/` for app-wide access
+- **Security**: Consider `Secure` flag in production
+
+**Exceptions:**
+
+- Only use localStorage for non-sensitive, non-persistent data that:
+  - Is not needed in server components
+  - Doesn't affect authentication or security
+  - Is purely client-side UI state (e.g., UI preferences that don't need SSR)
+
 ## Summary
 
 ### Key Rules
@@ -587,6 +655,7 @@ export default async function AssetsPage() {
 4. **✅ Admin layout**: MUST check for System Administrators role in `src/app/admin/layout.tsx`
 5. **✅ No company context**: Admin pages operate system-wide
 6. **✅ Consistent naming**: Use `admin` not `System Administrators` or `system` for directories
+7. **✅ Client-side storage**: Always prefer cookies over localStorage for better security and SSR compatibility
 
 ### Benefits
 
