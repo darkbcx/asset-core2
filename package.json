@@ -13,15 +13,25 @@
     "reset:full": "tsx database/scripts/reset.ts --full"
   },
   "dependencies": {
+    "@radix-ui/react-dialog": "^1.1.15",
+    "@radix-ui/react-select": "^2.2.6",
+    "@radix-ui/react-separator": "^1.1.7",
+    "@radix-ui/react-slot": "^1.2.3",
+    "@radix-ui/react-tooltip": "^1.2.8",
     "@types/jsonwebtoken": "^9.0.10",
     "bcrypt": "^6.0.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
     "dotenv": "^17.2.3",
     "jsonwebtoken": "^9.0.2",
     "lucide-react": "^0.548.0",
     "mysql2": "^3.15.3",
     "next": "15.5.6",
+    "next-themes": "^0.4.6",
     "react": "19.1.0",
     "react-dom": "19.1.0",
+    "sonner": "^2.0.7",
+    "tailwind-merge": "^3.3.1",
     "uuid": "^13.0.0",
     "zod": "^4.1.12"
   },
@@ -37,6 +47,7 @@
     "eslint-config-next": "15.5.6",
     "tailwindcss": "^4",
     "tsx": "^4.20.6",
+    "tw-animate-css": "^1.4.0",
     "typescript": "^5"
   },
   "main": "index.js",
