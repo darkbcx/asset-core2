@@ -480,8 +480,8 @@ function generateToken(data: Record<string, unknown>): string {
     JWT_SECRET as string,
     {
       expiresIn: JWT_EXPIRES_IN as string | number,
-      issuer: "assetcore",
-      audience: "assetcore-client",
+      // issuer: "assetcore",
+      // audience: "assetcore-client",
     } as jwt.SignOptions
   );
 }
@@ -498,8 +498,8 @@ function generateRefreshToken(data: Record<string, unknown>): string {
     JWT_SECRET as string,
     {
       expiresIn: JWT_REFRESH_EXPIRES_IN as string | number,
-      issuer: "assetcore",
-      audience: "assetcore-client",
+      // issuer: "assetcore",
+      // audience: "assetcore-client",
     } as jwt.SignOptions
   );
 }
