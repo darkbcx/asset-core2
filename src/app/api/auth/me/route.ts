@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken, createAuthContext } from '@/backend/authentication';
 import { getUserCompaniesWithDetails } from '@/backend/user';
+import { createSafeUserResponse } from '@/lib/utils';
 
 export async function GET(request: NextRequest) {
   try {
@@ -61,16 +62,10 @@ export async function GET(request: NextRequest) {
       }));
     }
     
+    // User object follows validator schema (snake_case, omits password_hash)
     return NextResponse.json({
       success: true,
-      user: {
-        id: user.id,
-        email: user.email,
-        firstName: user.first_name,
-        lastName: user.last_name,
-        userType: user.user_type,
-        systemRole: user.system_role,
-      },
+      user: createSafeUserResponse(user),
       companies: companiesWithDetails,
     });
   } catch (error) {

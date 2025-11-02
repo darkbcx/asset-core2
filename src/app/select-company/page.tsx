@@ -1,112 +1,70 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Building2, Check, Loader2, LogOut } from "lucide-react";
-import { setActiveCompanyCookie, getActiveCompanyCookie, getTokenCookie } from "@/lib/cookies";
+import { setActiveCompanyCookie, getTokenCookie } from "@/lib/cookies";
 import { handleLogout } from "@/lib/auth";
-
-interface Company {
-  company_id: string;
-  company_name: string;
-  company_slug?: string;
-  role: string;
-  is_primary: boolean;
-  is_active: boolean;
-}
+import { useAuth } from "@/lib/providers/auth-provider";
 
 export default function SelectCompanyPage() {
   const router = useRouter();
-  const [companies, setCompanies] = useState<Company[]>([]);
+  const { companies: allCompanies, activeCompany, isLoading: authLoading, isAuthenticated, setActiveCompany: setActiveCompanyInContext } = useAuth();
   const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
-  const [activeCompanyId, setActiveCompanyId] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const hasInitializedSelection = useRef(false);
+
+  // Filter to only active companies
+  const companies = allCompanies.filter((company) => company.is_active);
+  const activeCompanyId = activeCompany?.company_id || null;
+  const isLoading = authLoading;
 
   useEffect(() => {
-    // Fetch user companies
-    const fetchCompanies = async () => {
-      try {
-        // Get token from cookies
-        const token = getTokenCookie();
-        
-        if (!token) {
-          router.push("/login");
-          return;
-        }
+    // Redirect to login if not authenticated
+    if (!authLoading && !isAuthenticated) {
+      router.push("/login");
+      return;
+    }
 
-        const response = await fetch("/api/auth/me", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        if (!response.ok) {
-          throw new Error("Failed to fetch companies");
-        }
-
-        const result = await response.json();
-
-        if (!result.success || !result.companies || result.companies.length === 0) {
-          setError("No companies found. Please contact your administrator.");
-          setIsLoading(false);
-          return;
-        }
-
-        // Filter to only active companies
-        const activeCompanies = result.companies.filter(
-          (company: Company) => company.is_active
-        );
-
-        if (activeCompanies.length === 0) {
-          setError("No active companies found. Please contact your administrator.");
-          setIsLoading(false);
-          return;
-        }
-
-        // If only one company, auto-select it
-        if (activeCompanies.length === 1) {
-          const companyId = activeCompanies[0].company_id;
-          setActiveCompanyCookie(companyId);
-          router.push("/dashboard");
-          return;
-        }
-
-        // Get currently active company ID from cookie
-        const currentActiveCompanyId = getActiveCompanyCookie();
-        setActiveCompanyId(currentActiveCompanyId);
-        
-        // If there's an active company, set it as selected by default
-        if (currentActiveCompanyId) {
-          const activeCompanyExists = activeCompanies.some(
-            (company: Company) => company.company_id === currentActiveCompanyId
-          );
-          if (activeCompanyExists) {
-            setSelectedCompanyId(currentActiveCompanyId);
-          }
-        }
-
-        setCompanies(activeCompanies);
-        setIsLoading(false);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load companies");
-        setIsLoading(false);
+    // Handle error states
+    if (!authLoading && isAuthenticated) {
+      if (!allCompanies || allCompanies.length === 0) {
+        setError("No companies found. Please contact your administrator.");
+        return;
       }
-    };
 
-    fetchCompanies();
-  }, [router]);
+      if (companies.length === 0) {
+        setError("No active companies found. Please contact your administrator.");
+        return;
+      }
+
+      // If only one company, auto-select it
+      if (companies.length === 1) {
+        const companyId = companies[0].company_id;
+        setActiveCompanyCookie(companyId);
+        setActiveCompanyInContext(companyId);
+        router.push("/dashboard");
+        return;
+      }
+
+      // Set active company as selected by default only once on initial load
+      if (!hasInitializedSelection.current && activeCompanyId) {
+        setSelectedCompanyId(activeCompanyId);
+        hasInitializedSelection.current = true;
+      }
+    }
+  }, [authLoading, isAuthenticated, allCompanies, companies, activeCompanyId, router, setActiveCompanyInContext]);
 
   const handleSelectCompany = async (companyId: string) => {
     setIsSubmitting(true);
     setError(null);
 
     try {
-      // Get token from cookies
+      // Get token from cookies for API authentication
       const token = getTokenCookie();
       
       if (!token) {
@@ -130,8 +88,9 @@ export default function SelectCompanyPage() {
         throw new Error(result.error || "Failed to set active company");
       }
 
-      // Set cookie and redirect
+      // Set cookie and update context, then redirect
       setActiveCompanyCookie(companyId);
+      setActiveCompanyInContext(companyId);
       router.push("/dashboard");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to select company");

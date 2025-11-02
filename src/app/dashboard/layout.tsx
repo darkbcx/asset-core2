@@ -1,8 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Package, Wrench, BarChart3, Settings, LayoutDashboard, LogOut, Building2, ChevronDown, ArrowRight } from "lucide-react";
 import {
   Sidebar,
@@ -25,18 +24,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { getActiveCompanyCookie, getTokenCookie } from "@/lib/cookies";
-import { useRouter } from "next/navigation";
+import { useAuth } from "@/lib/providers/auth-provider";
 import { handleLogout } from "@/lib/auth";
-
-interface Company {
-  company_id: string;
-  company_name?: string;
-  company_slug?: string;
-  role: string;
-  is_primary: boolean;
-  is_active?: boolean;
-}
 
 export default function DashboardLayout({
   children,
@@ -45,65 +34,31 @@ export default function DashboardLayout({
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const [activeCompanyName, setActiveCompanyName] = useState<string | null>(null);
-  const [userName, setUserName] = useState<string>("User");
-  const [userRole, setUserRole] = useState<string>("");
-  const [hasMultipleCompanies, setHasMultipleCompanies] = useState<boolean>(false);
+  const { user, companies, activeCompany, isLoading } = useAuth();
 
   const onLogout = () => {
     handleLogout(router);
   };
 
-  useEffect(() => {
-    const fetchUserInfo = async () => {
-      try {
-        const token = getTokenCookie();
-        if (!token) return;
+  // Helper functions to format display values
+  // Handle loading state: show placeholder while loading, actual name when available
+  const userName = isLoading
+    ? "Loading..."
+    : user
+    ? `${user.first_name}${user.last_name ? ` ${user.last_name}` : ""}`.trim() || "User"
+    : "User";
 
-        const response = await fetch("/api/auth/me", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+  // Calculate user initials, handle loading state
+  const userInitials = isLoading
+    ? "••"
+    : user
+    ? `${user.first_name?.[0] || ""}${user.last_name?.[0] || ""}`.toUpperCase().slice(0, 2) || "U"
+    : "U";
 
-        if (!response.ok) return;
+  const activeCompanyName = activeCompany?.company_name || null;
+  const userRole = activeCompany?.role || "";
 
-        const result = await response.json();
-        
-        if (result.success) {
-          // Set user name
-          const firstName = result.user?.firstName || "";
-          const lastName = result.user?.lastName || "";
-          setUserName(`${firstName} ${lastName}`.trim() || "User");
-          
-          // Check if user has multiple companies
-          if (result.companies && Array.isArray(result.companies)) {
-            const activeCompanies = result.companies.filter(
-              (company: Company) => company.is_active !== false
-            );
-            setHasMultipleCompanies(activeCompanies.length > 1);
-          }
-          
-          // Find active company
-          const activeCompanyId = getActiveCompanyCookie();
-          if (activeCompanyId && result.companies) {
-            const activeCompany = result.companies.find(
-              (company: Company) => company.company_id === activeCompanyId
-            );
-
-            if (activeCompany) {
-              setActiveCompanyName(activeCompany.company_name || "Company");
-              setUserRole(activeCompany.role || "");
-            }
-          }
-        }
-      } catch (error) {
-        console.error("Failed to fetch user info:", error);
-      }
-    };
-
-    fetchUserInfo();
-  }, []);
+  const hasMultipleCompanies = companies.filter((c) => c.is_active !== false).length > 1;
 
   const menuItems = [
     {
@@ -187,12 +142,7 @@ export default function DashboardLayout({
               <DropdownMenuTrigger asChild>
                 <button className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
                   <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground shrink-0">
-                    {userName
-                      .split(" ")
-                      .map((n) => n[0])
-                      .join("")
-                      .toUpperCase()
-                      .slice(0, 2)}
+                    {userInitials}
                   </div>
                   <div className="hidden sm:flex flex-col gap-0.5 items-start min-w-0">
                     <p className="text-sm font-medium truncate">{userName}</p>
