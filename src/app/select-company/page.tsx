@@ -5,9 +5,9 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Building2, Check, Loader2, ArrowLeft } from "lucide-react";
-import Link from "next/link";
-import { setActiveCompanyCookie, getTokenCookie } from "@/lib/cookies";
+import { Building2, Check, Loader2, LogOut } from "lucide-react";
+import { setActiveCompanyCookie, getActiveCompanyCookie, getTokenCookie } from "@/lib/cookies";
+import { handleLogout } from "@/lib/auth";
 
 interface Company {
   company_id: string;
@@ -22,6 +22,7 @@ export default function SelectCompanyPage() {
   const router = useRouter();
   const [companies, setCompanies] = useState<Company[]>([]);
   const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
+  const [activeCompanyId, setActiveCompanyId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -75,6 +76,20 @@ export default function SelectCompanyPage() {
           return;
         }
 
+        // Get currently active company ID from cookie
+        const currentActiveCompanyId = getActiveCompanyCookie();
+        setActiveCompanyId(currentActiveCompanyId);
+        
+        // If there's an active company, set it as selected by default
+        if (currentActiveCompanyId) {
+          const activeCompanyExists = activeCompanies.some(
+            (company: Company) => company.company_id === currentActiveCompanyId
+          );
+          if (activeCompanyExists) {
+            setSelectedCompanyId(currentActiveCompanyId);
+          }
+        }
+
         setCompanies(activeCompanies);
         setIsLoading(false);
       } catch (err) {
@@ -124,6 +139,10 @@ export default function SelectCompanyPage() {
     }
   };
 
+  const onLogout = () => {
+    handleLogout(router);
+  };
+
   const formatRole = (role: string): string => {
     return role
       .split("_")
@@ -151,11 +170,9 @@ export default function SelectCompanyPage() {
             <CardDescription>{error}</CardDescription>
           </CardHeader>
           <CardContent>
-            <Button asChild className="w-full">
-              <Link href="/login">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Login
-              </Link>
+            <Button onClick={onLogout} className="w-full">
+              <LogOut className="h-4 w-4 mr-2" />
+              Sign Out
             </Button>
           </CardContent>
         </Card>
@@ -180,17 +197,23 @@ export default function SelectCompanyPage() {
         )}
 
         <div className="grid gap-4 md:grid-cols-2">
-          {companies.map((company) => (
+          {companies.map((company) => {
+            const isActive = activeCompanyId === company.company_id;
+            const isSelected = selectedCompanyId === company.company_id;
+            
+            return (
             <Card
               key={company.company_id}
               className={`cursor-pointer transition-all hover:shadow-md ${
-                selectedCompanyId === company.company_id
+                isActive
+                  ? "ring-2 ring-primary bg-primary/5 border-primary"
+                  : isSelected
                   ? "ring-2 ring-primary"
                   : ""
               }`}
               onClick={() => setSelectedCompanyId(company.company_id)}
             >
-              <CardHeader>
+              <CardHeader className="grow">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
                     <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
@@ -218,29 +241,39 @@ export default function SelectCompanyPage() {
                     <span className="text-muted-foreground">Role:</span>
                     <Badge variant="secondary">{formatRole(company.role)}</Badge>
                   </div>
-                  {selectedCompanyId === company.company_id && (
+                  {isActive && (
+                    <div className="flex items-center gap-2 text-primary font-medium">
+                      <Check className="h-4 w-4" />
+                      <span className="text-sm">Currently Active</span>
+                    </div>
+                  )}
+                  {!isActive && isSelected && (
                     <div className="flex items-center gap-2 text-primary">
                       <Check className="h-4 w-4" />
                       <span className="text-sm font-medium">Selected</span>
                     </div>
                   )}
+                  {!isActive && !isSelected && (
+                    <div className="flex items-center gap-2 text-primary">
+                      <span className="text-sm font-medium">&nbsp;</span>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
-          ))}
+            );
+          })}
         </div>
 
         <div className="flex gap-3">
           <Button
             variant="outline"
             className="flex-1"
-            asChild
+            onClick={onLogout}
             disabled={isSubmitting}
           >
-            <Link href="/login">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Login
-            </Link>
+            <LogOut className="h-4 w-4 mr-2" />
+            Sign Out
           </Button>
           <Button
             className="flex-1"
