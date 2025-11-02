@@ -72,6 +72,7 @@ export async function getUserById(id: string): Promise<BackendResponse<User>> {
 ```
 src/backend/
 ├── authentication.ts    # JWT authentication & token management
+├── company.ts          # Company/tenant management
 ├── user.ts             # User management & queries
 ├── assets.ts           # Asset management
 ├── components.ts       # Component management
