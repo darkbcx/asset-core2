@@ -3,11 +3,10 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Package, Wrench, BarChart3, Settings, LayoutDashboard, LogOut, Building2 } from "lucide-react";
+import { Package, Wrench, BarChart3, Settings, LayoutDashboard, LogOut, Building2, ChevronDown, ArrowRight } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
-  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarHeader,
@@ -18,6 +17,14 @@ import {
   SidebarRail,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { getActiveCompanyCookie, getTokenCookie } from "@/lib/cookies";
 import { useRouter } from "next/navigation";
 import { handleLogout } from "@/lib/auth";
@@ -28,6 +35,7 @@ interface Company {
   company_slug?: string;
   role: string;
   is_primary: boolean;
+  is_active?: boolean;
 }
 
 export default function DashboardLayout({
@@ -40,6 +48,7 @@ export default function DashboardLayout({
   const [activeCompanyName, setActiveCompanyName] = useState<string | null>(null);
   const [userName, setUserName] = useState<string>("User");
   const [userRole, setUserRole] = useState<string>("");
+  const [hasMultipleCompanies, setHasMultipleCompanies] = useState<boolean>(false);
 
   const onLogout = () => {
     handleLogout(router);
@@ -66,6 +75,14 @@ export default function DashboardLayout({
           const firstName = result.user?.firstName || "";
           const lastName = result.user?.lastName || "";
           setUserName(`${firstName} ${lastName}`.trim() || "User");
+          
+          // Check if user has multiple companies
+          if (result.companies && Array.isArray(result.companies)) {
+            const activeCompanies = result.companies.filter(
+              (company: Company) => company.is_active !== false
+            );
+            setHasMultipleCompanies(activeCompanies.length > 1);
+          }
           
           // Find active company
           const activeCompanyId = getActiveCompanyCookie();
@@ -159,39 +176,6 @@ export default function DashboardLayout({
             </SidebarGroupContent>
           </SidebarGroup>
         </SidebarContent>
-        <SidebarFooter className="border-t border-sidebar-border">
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <div className="flex items-center gap-2 px-2 py-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground shrink-0">
-                  {userName
-                    .split(" ")
-                    .map((n) => n[0])
-                    .join("")
-                    .toUpperCase()
-                    .slice(0, 2)}
-                </div>
-                <div className="flex flex-col gap-0.5 min-w-0 flex-1">
-                  <p className="text-sm font-medium truncate">{userName}</p>
-                  {userRole && (
-                    <p className="text-xs text-muted-foreground truncate">
-                      {userRole
-                        .split("_")
-                        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-                        .join(" ")}
-                    </p>
-                  )}
-                </div>
-              </div>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton onClick={onLogout} tooltip="Sign Out">
-                <LogOut />
-                <span>Sign Out</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </SidebarMenu>
-        </SidebarFooter>
         <SidebarRail />
       </Sidebar>
       <main className="flex flex-1 flex-col">
@@ -199,12 +183,69 @@ export default function DashboardLayout({
           <SidebarTrigger />
           <div className="flex-1" />
           <div className="flex items-center gap-4">
-            <button
-              onClick={onLogout}
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-            >
-              Sign Out
-            </button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground shrink-0">
+                    {userName
+                      .split(" ")
+                      .map((n) => n[0])
+                      .join("")
+                      .toUpperCase()
+                      .slice(0, 2)}
+                  </div>
+                  <div className="hidden sm:flex flex-col gap-0.5 items-start min-w-0">
+                    <p className="text-sm font-medium truncate">{userName}</p>
+                    {userRole && (
+                      <p className="text-xs text-muted-foreground truncate">
+                        {userRole
+                          .split("_")
+                          .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+                          .join(" ")}
+                      </p>
+                    )}
+                  </div>
+                  <ChevronDown className="h-4 w-4 text-muted-foreground hidden sm:block" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel>
+                  <div className="flex flex-col gap-1">
+                    <div className="font-medium">{userName}</div>
+                    {userRole && (
+                      <div className="text-xs text-muted-foreground font-normal">
+                        {userRole
+                          .split("_")
+                          .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+                          .join(" ")}
+                      </div>
+                    )}
+                    {activeCompanyName && (
+                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-normal mt-1">
+                        <Building2 className="h-3 w-3" />
+                        <span className="truncate">{activeCompanyName}</span>
+                      </div>
+                    )}
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {hasMultipleCompanies && (
+                  <>
+                    <DropdownMenuItem asChild>
+                      <Link href="/select-company" className="cursor-pointer">
+                        <ArrowRight className="mr-2 h-4 w-4" />
+                        <span>Switch Company</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                  </>
+                )}
+                <DropdownMenuItem onClick={onLogout} className="cursor-pointer">
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Sign Out</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </header>
         <div className="flex-1 overflow-auto bg-muted/40 p-6">
