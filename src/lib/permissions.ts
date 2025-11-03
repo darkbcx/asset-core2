@@ -42,38 +42,15 @@ export const SUPPORT_ADMIN_PERMISSIONS = [
  * Full administrative access within company scope
  */
 export const COMPANY_ADMIN_PERMISSIONS = [
-  // Assets
-  'assets:*',              // All asset permissions
-  'assets:import',         // Bulk import
-  'assets:export',         // Bulk export
-  
-  // Components
-  'components:*',          // All component permissions
-  'components:transfer',    // Component transfers
-  
-  // Maintenance
-  'maintenance:*',         // All maintenance permissions
-  'maintenance:assign',    // Assign technicians
-  'maintenance:schedule',  // Schedule maintenance
-  
-  // Users
-  'users:*',               // All user management
-  'users:manage',          // Manage users
-  'users:invite',          // Invite users
-  'users:configure',       // Configure roles/permissions
-  
-  // Companies
-  'companies:read',        // Read company info
-  'companies:update',      // Update company settings
-  'companies:configure',   // Configure settings
-  
-  // Files
-  'files:*',               // All file operations
-  
-  // Reports
-  'reports:*',             // All reports
-  'reports:generate',      // Generate reports
-  'reports:export',        // Export reports
+  'assets:*',
+  'components:*', 
+  'maintenance:*',
+  'users:*',
+  'companies:read',
+  'companies:update',
+  'companies:configure',
+  'files:*',
+  'reports:*',
 ];
 
 /**
@@ -119,10 +96,8 @@ export const ASSET_MANAGER_PERMISSIONS = [
  * Read-only access with reporting capabilities
  */
 export const OPERATIONS_SUPERVISOR_PERMISSIONS = [
-  // Read-only access to all entities
   '*:read',
-  
-  // Reports
+  'maintenance:read',
   'reports:generate',
   'reports:export',
 ];
@@ -132,24 +107,14 @@ export const OPERATIONS_SUPERVISOR_PERMISSIONS = [
  * Field maintenance execution and documentation
  */
 export const MAINTENANCE_TECHNICIAN_PERMISSIONS = [
-  // Assets (read only, assigned assets)
   'assets:read',
-  
-  // Components (read and update status)
   'components:read',
-  'components:update',
-  
-  // Maintenance (create, read, update assigned)
+  'components:update', 
   'maintenance:create',
   'maintenance:read',
   'maintenance:update',
-  
-  // Files (upload and download)
   'files:upload',
   'files:download',
-  
-  // Reports (read personal work)
-  'reports:read',
 ];
 
 // ==========================================

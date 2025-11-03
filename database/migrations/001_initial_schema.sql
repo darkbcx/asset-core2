@@ -51,7 +51,7 @@ CREATE TABLE IF NOT EXISTS user_companies (
     user_id VARCHAR(36) NOT NULL,
     company_id VARCHAR(36) NOT NULL,
     role VARCHAR(50) NOT NULL,
-    permissions JSON DEFAULT ('{}'),
+    permissions JSON DEFAULT ('[]'),
     is_active BOOLEAN DEFAULT TRUE,
     is_primary BOOLEAN DEFAULT FALSE,
     joined_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,

@@ -32,7 +32,7 @@ INSERT INTO companies (id, name, slug, settings, subscription_plan, is_active) V
 
 -- System Administrator
 INSERT INTO users (id, user_type, system_role, system_permissions, email, first_name, last_name, password_hash, is_active) VALUES
-('650e8400-e29b-41d4-a716-446655440000', 'system_admin', 'super_admin', '{"permissions": ["*:*"]}', 'admin@assetcore.com', 'System', 'Administrator', '$2a$10$rXKQaLzKLlZxPqQ.xPqQpefPqQxPqQxPqQxPqQxPqQxPqQxPqQxy', TRUE);
+('650e8400-e29b-41d4-a716-446655440000', 'system_admin', 'super_admin', '["*:*"]', 'admin@assetcore.com', 'System', 'Administrator', '$2a$10$rXKQaLzKLlZxPqQ.xPqQpefPqQxPqQxPqQxPqQxPqQxPqQxPqQxy', TRUE);
 
 -- Company Admin for Acme
 INSERT INTO users (id, user_type, email, first_name, last_name, password_hash, is_active) VALUES

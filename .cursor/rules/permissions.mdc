@@ -225,115 +225,101 @@ The AssetCore permission system uses a hierarchical `[entity]:[action]` format w
 The permissions are stored in the `user_companies.permissions` JSON field as an array of permission strings:
 
 ```json
-{
-  "permissions": [
-    "assets:create",
-    "assets:read", 
-    "assets:update",
-    "assets:delete",
-    "components:create",
-    "components:read",
-    "components:update",
-    "maintenance:create",
-    "maintenance:read",
-    "maintenance:update",
-    "maintenance:assign",
-    "users:read",
-    "files:upload",
-    "files:download",
-    "reports:generate"
-  ]
-}
+[
+  "assets:create",
+  "assets:read", 
+  "assets:update",
+  "assets:delete",
+  "components:create",
+  "components:read",
+  "components:update",
+  "maintenance:create",
+  "maintenance:read",
+  "maintenance:update",
+  "maintenance:assign",
+  "users:read",
+  "files:upload",
+  "files:download",
+  "reports:generate"
+]
 ```
 
 #### Permission Hierarchy Examples
 
 **System Administrator:**
 ```json
-{
-  "permissions": ["*:*"]
-}
+["*:*"]
 ```
 
 **Company Administrators:**
 ```json
-{
-  "permissions": [
-    "assets:*",
-    "components:*", 
-    "maintenance:*",
-    "users:*",
-    "companies:read",
-    "companies:update",
-    "companies:configure",
-    "files:*",
-    "reports:*"
-  ]
-}
+[
+  "assets:*",
+  "components:*", 
+  "maintenance:*",
+  "users:*",
+  "companies:read",
+  "companies:update",
+  "companies:configure",
+  "files:*",
+  "reports:*"
+]
 ```
 
 **Asset Managers:**
 ```json
-{
-  "permissions": [
-    "assets:create",
-    "assets:read", 
-    "assets:update",
-    "components:create",
-    "components:read",
-    "components:update",
-    "maintenance:create",
-    "maintenance:read",
-    "maintenance:update",
-    "maintenance:assign",
-    "maintenance:schedule",
-    "users:read",
-    "files:upload",
-    "files:download",
-    "files:manage",
-    "reports:generate",
-    "reports:export"
-  ]
-}
+[
+  "assets:create",
+  "assets:read", 
+  "assets:update",
+  "components:create",
+  "components:read",
+  "components:update",
+  "maintenance:create",
+  "maintenance:read",
+  "maintenance:update",
+  "maintenance:assign",
+  "maintenance:schedule",
+  "users:read",
+  "files:upload",
+  "files:download",
+  "files:manage",
+  "reports:generate",
+  "reports:export"
+]
 ```
 
 **Operations Supervisors:**
 ```json
-{
-  "permissions": [
-    "*:read",
-    "maintenance:read",
-    "reports:generate",
-    "reports:export"
-  ]
-}
+[
+  "*:read",
+  "maintenance:read",
+  "reports:generate",
+  "reports:export"
+]
 ```
 
 **Maintenance Technicians:**
 ```json
-{
-  "permissions": [
-    "assets:read",
-    "components:read",
-    "components:update", 
-    "maintenance:create",
-    "maintenance:read",
-    "maintenance:update",
-    "files:upload",
-    "files:download"
-  ]
-}
+[
+  "assets:read",
+  "components:read",
+  "components:update", 
+  "maintenance:create",
+  "maintenance:read",
+  "maintenance:update",
+  "files:upload",
+  "files:download"
+]
 ```
 
 **Support Administrators:**
 ```json
-{
-  "permissions": [
-    "*:read",
-    "users:update",
-    "system:monitor"
-  ]
-}
+[
+  "*:read",
+  "users:update",
+  "system:monitor"
+]
 ```
 
 ### Permission Validation

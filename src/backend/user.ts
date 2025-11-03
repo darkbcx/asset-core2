@@ -603,7 +603,7 @@ export async function createUserCompany(
     user_id: validatedData.user_id,
     company_id: validatedData.company_id,
     role: validatedData.role,
-    permissions: validatedData.permissions || {},
+    permissions: validatedData.permissions || [],
     is_active: validatedData.is_active ?? true,
     is_primary: validatedData.is_primary ?? false,
     joined_at: now,

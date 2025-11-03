@@ -48,26 +48,26 @@ AssetCore implements a comprehensive database schema designed for multi-tenant a
 
 **Purpose:** System users with role-based access control supporting both tenant-specific users and platform-wide system administrators.
 
-| Field                | Type         | Description                           | Constraints      |
-| -------------------- | ------------ | ------------------------------------- | ---------------- |
-| `id`                 | CHAR(36)     | Primary key                           | NOT NULL, UNIQUE |
-| `user_type`          | VARCHAR(20)  | User type: 'tenant' or 'system_admin' | NOT NULL         |
-| `system_role`        | VARCHAR(50)  | System role (only for system_admin)   | NULLABLE         |
-| `system_permissions` | JSON         | System administrator permissions      | NULLABLE         |
-| `email`              | VARCHAR(255) | User email address                    | NOT NULL, UNIQUE |
-| `first_name`         | VARCHAR(100) | User's first name                     | NOT NULL         |
-| `last_name`          | VARCHAR(100) | User's last name                      | NULLABLE         |
-| `is_active`          | BOOLEAN      | Account status                        | DEFAULT true     |
-| `last_login`         | TIMESTAMP    | Last login timestamp                  | NULLABLE         |
-| `password_hash`      | VARCHAR(255) | Hashed password for authentication    | NOT NULL         |
-| `created_at`         | TIMESTAMP    | Creation timestamp                    | NOT NULL         |
-| `updated_at`         | TIMESTAMP    | Last update timestamp                 | NOT NULL         |
+| Field                | Type         | Description                                                          | Constraints      |
+| -------------------- | ------------ | -------------------------------------------------------------------- | ---------------- |
+| `id`                 | CHAR(36)     | Primary key                                                          | NOT NULL, UNIQUE |
+| `user_type`          | VARCHAR(20)  | User type: 'tenant' or 'system_admin'                                | NOT NULL         |
+| `system_role`        | VARCHAR(50)  | System role (only for system_admin)                                  | NULLABLE         |
+| `system_permissions` | JSON         | System administrator permissions (array of strings: "entity:action") | NULLABLE         |
+| `email`              | VARCHAR(255) | User email address                                                   | NOT NULL, UNIQUE |
+| `first_name`         | VARCHAR(100) | User's first name                                                    | NOT NULL         |
+| `last_name`          | VARCHAR(100) | User's last name                                                     | NULLABLE         |
+| `is_active`          | BOOLEAN      | Account status                                                       | DEFAULT true     |
+| `last_login`         | TIMESTAMP    | Last login timestamp                                                 | NULLABLE         |
+| `password_hash`      | VARCHAR(255) | Hashed password for authentication                                   | NOT NULL         |
+| `created_at`         | TIMESTAMP    | Creation timestamp                                                   | NOT NULL         |
+| `updated_at`         | TIMESTAMP    | Last update timestamp                                                | NOT NULL         |
 
 **Key Features:**
 
 - **Dual User Types**: Supports both tenant users and system administrators
 - **System Roles**: For system administrators, the `system_role` field distinguishes between 'Super Administrator' and 'Support Administrator'
-- **System Permissions**: The `system_permissions` field stores granular permissions for system administrators (stored as JSON)
+- **System Permissions**: The `system_permissions` field stores granular permissions for system administrators (stored as JSON array of strings: "entity:action")
 - **Multi-Company Support**: Users can be associated with multiple companies via UserCompany
 - **Security Features**: Password hashing and login tracking
 - **Soft Delete**: Account deactivation with is_active flag
@@ -97,18 +97,18 @@ System administrators are identified by `user_type = 'system_admin'` and differe
 
 **Purpose:** Many-to-many relationship between users and companies, storing role and permissions for each company association.
 
-| Field         | Type        | Description                   | Constraints      |
-| ------------- | ----------- | ----------------------------- | ---------------- |
-| `id`          | CHAR(36)    | Primary key                   | NOT NULL, UNIQUE |
-| `user_id`     | CHAR(36)    | Foreign key to User           | NOT NULL, FK     |
-| `company_id`  | CHAR(36)    | Foreign key to Company        | NOT NULL, FK     |
-| `role`        | VARCHAR(50) | User role within this company | NOT NULL         |
-| `permissions` | JSON        | Company-specific permissions  | DEFAULT '{}'     |
-| `is_active`   | BOOLEAN     | Association status            | DEFAULT true     |
-| `is_primary`  | BOOLEAN     | Primary company for user      | DEFAULT false    |
-| `joined_at`   | TIMESTAMP   | When user joined this company | NOT NULL         |
-| `created_at`  | TIMESTAMP   | Creation timestamp            | NOT NULL         |
-| `updated_at`  | TIMESTAMP   | Last update timestamp         | NOT NULL         |
+| Field         | Type        | Description                                                      | Constraints      |
+| ------------- | ----------- | ---------------------------------------------------------------- | ---------------- |
+| `id`          | CHAR(36)    | Primary key                                                      | NOT NULL, UNIQUE |
+| `user_id`     | CHAR(36)    | Foreign key to User                                              | NOT NULL, FK     |
+| `company_id`  | CHAR(36)    | Foreign key to Company                                           | NOT NULL, FK     |
+| `role`        | VARCHAR(50) | User role within this company                                    | NOT NULL         |
+| `permissions` | JSON        | Company-specific permissions (array of strings: "entity:action") | DEFAULT '[]'     |
+| `is_active`   | BOOLEAN     | Association status                                               | DEFAULT true     |
+| `is_primary`  | BOOLEAN     | Primary company for user                                         | DEFAULT false    |
+| `joined_at`   | TIMESTAMP   | When user joined this company                                    | NOT NULL         |
+| `created_at`  | TIMESTAMP   | Creation timestamp                                               | NOT NULL         |
+| `updated_at`  | TIMESTAMP   | Last update timestamp                                            | NOT NULL         |
 
 **Key Features:**
 
@@ -196,20 +196,18 @@ The system uses two different storage mechanisms for permissions:
 Both use the same JSON format for granular permission configuration: an array of permission strings in the `[entity]:[action]` format (with wildcard support):
 
 ```json
-{
-  "permissions": [
-    "assets:create",
-    "assets:read",
-    "assets:update",
-    "maintenance:create",
-    "maintenance:read",
-    "maintenance:update",
-    "maintenance:assign",
-    "users:read",
-    "reports:generate",
-    "reports:export"
-  ]
-}
+[
+  "assets:create",
+  "assets:read",
+  "assets:update",
+  "maintenance:create",
+  "maintenance:read",
+  "maintenance:update",
+  "maintenance:assign",
+  "users:read",
+  "reports:generate",
+  "reports:export"
+]
 ```
 
 **For System Administrator**, permissions in the `User.system_permissions` field control:
@@ -406,14 +404,14 @@ Both use the same JSON format for granular permission configuration: an array of
 
 **Purpose:** Server-side storage and management of JWT refresh tokens with rotation, reuse detection, and revocation support.
 
-| Field         | Type         | Description                               | Constraints      |
-| ------------- | ------------ | ----------------------------------------- | ---------------- |
-| `id`          | CHAR(36)     | Primary key                               | NOT NULL, UNIQUE |
-| `user_id`     | CHAR(36)     | Foreign key to User                       | NOT NULL, FK     |
-| `token_hash`  | VARCHAR(64)  | SHA-256 hash of refresh token            | NOT NULL, UNIQUE |
-| `expires_at`  | TIMESTAMP    | Token expiration timestamp                | NOT NULL         |
-| `revoked`     | BOOLEAN      | Revocation status                         | DEFAULT FALSE    |
-| `created_at`  | TIMESTAMP    | Token creation timestamp                  | NOT NULL         |
+| Field        | Type        | Description                   | Constraints      |
+| ------------ | ----------- | ----------------------------- | ---------------- |
+| `id`         | CHAR(36)    | Primary key                   | NOT NULL, UNIQUE |
+| `user_id`    | CHAR(36)    | Foreign key to User           | NOT NULL, FK     |
+| `token_hash` | VARCHAR(64) | SHA-256 hash of refresh token | NOT NULL, UNIQUE |
+| `expires_at` | TIMESTAMP   | Token expiration timestamp    | NOT NULL         |
+| `revoked`    | BOOLEAN     | Revocation status             | DEFAULT FALSE    |
+| `created_at` | TIMESTAMP   | Token creation timestamp      | NOT NULL         |
 
 **Key Features:**
 

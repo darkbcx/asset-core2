@@ -16,11 +16,8 @@ export const tenantRoleSchema = z.enum([
   'maintenance_technician',
 ]);
 
-// Permission set schema
-export const permissionSetSchema = z.record(
-  z.string(),
-  z.record(z.string(), z.boolean())
-);
+// Permission schema - array of permission strings in format "entity:action"
+export const permissionSchema = z.array(z.string()).default([]);
 
 // Base user schema
 export const userSchema = z.object({
@@ -33,7 +30,7 @@ export const userSchema = z.object({
   is_active: z.boolean(),
   last_login: z.date().nullable(),
   password_hash: z.string().min(1),
-  system_permissions: permissionSetSchema.nullable(),
+  system_permissions: permissionSchema.nullable(),
   created_at: z.date(),
   updated_at: z.date(),
 });
@@ -44,7 +41,7 @@ export const userCompanySchema = z.object({
   user_id: z.string().uuid(),
   company_id: z.string().uuid(),
   role: z.string().min(1).max(50),
-  permissions: permissionSetSchema,
+  permissions: permissionSchema,
   is_active: z.boolean(),
   is_primary: z.boolean(),
   joined_at: z.date(),
@@ -60,7 +57,7 @@ export const createUserSchema = z.object({
   last_name: z.string().min(1).max(100).optional(),
   user_type: userTypeSchema,
   system_role: systemRoleSchema.optional(),
-  system_permissions: permissionSetSchema.optional(),
+  system_permissions: permissionSchema.optional(),
 });
 
 // Update user schema
@@ -70,7 +67,7 @@ export const updateUserSchema = z.object({
   email: z.string().email().optional(),
   is_active: z.boolean().optional(),
   system_role: systemRoleSchema.optional(),
-  system_permissions: permissionSetSchema.optional(),
+  system_permissions: permissionSchema.optional(),
 });
 
 // Login schema
@@ -84,14 +81,14 @@ export const createUserCompanySchema = z.object({
   user_id: z.string().uuid(),
   company_id: z.string().uuid(),
   role: tenantRoleSchema,
-  permissions: permissionSetSchema.optional(),
+  permissions: permissionSchema.optional(),
   is_active: z.boolean().optional(),
   is_primary: z.boolean().optional(),
 });
 
 export const updateUserCompanySchema = z.object({
   role: tenantRoleSchema.optional(),
-  permissions: permissionSetSchema.optional(),
+  permissions: permissionSchema.optional(),
   is_active: z.boolean().optional(),
   is_primary: z.boolean().optional(),
 });
@@ -101,7 +98,7 @@ export type User = z.infer<typeof userSchema>;
 export type UserType = z.infer<typeof userTypeSchema>;
 export type SystemRole = z.infer<typeof systemRoleSchema>;
 export type TenantRole = z.infer<typeof tenantRoleSchema>;
-export type PermissionSet = z.infer<typeof permissionSetSchema>;
+export type PermissionSet = z.infer<typeof permissionSchema>;
 export type UserCompany = z.infer<typeof userCompanySchema>;
 export type CreateUser = z.infer<typeof createUserSchema>;
 export type UpdateUser = z.infer<typeof updateUserSchema>;
