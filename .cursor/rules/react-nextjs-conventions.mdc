@@ -41,10 +41,10 @@ AssetCore follows comprehensive React and Next.js conventions to ensure consiste
 └── maintenance/                  # /dashboard/maintenance
 ```
 
-### System-Wide Routes (System Administrators)
+### System-Wide Routes (System Administrator)
 
 ```
-/admin/                           # ⭐ System Administrators pages (no route group)
+/admin/                           # ⭐ admin pages (no route group)
 ├── page.tsx                      # /admin (admin dashboard)
 ├── companies/                    # /admin/companies
 │   ├── page.tsx
@@ -58,7 +58,7 @@ AssetCore follows comprehensive React and Next.js conventions to ensure consiste
 
 **Key Differences:**
 - **Company-scoped**: Uses `dashboard` route group, requires company context
-- **System-wide**: Uses `admin` directory (no route group), System Administrators only, no company context
+- **System-wide**: Uses `admin` directory (no route group), System Administrator only, no company context
 
 ## Next.js API Route Structure
 
@@ -71,10 +71,10 @@ AssetCore follows comprehensive React and Next.js conventions to ensure consiste
 └── maintenance/                  # Company-scoped
 ```
 
-### System-Wide API Routes (System Administrators Only)
+### System-Wide API Routes (System Administrator Only)
 
 ```
-/api/admin/                       # ⭐ System Administrators API routes
+/api/admin/                       # ⭐ admin API routes
 ├── companies/
 │   ├── route.ts                  # GET, POST /api/admin/companies
 │   └── [id]/
@@ -126,7 +126,7 @@ const AssetCard = () => { };
 const AssetForm = () => { };
 const AssetStatusBadge = () => { };
 
-// Admin components (System Administrators only)
+// Admin components (System Administrator only)
 const CompanyList = () => { };            // ⭐ Admin component
 const CompanyForm = () => { };            // ⭐ Admin component
 const UserList = () => { };               // ⭐ Admin component
@@ -170,13 +170,13 @@ components/features/admin/CompanyList.tsx      // ⭐ Admin components
 
 // Pages (Next.js): lowercase with hyphens or folders
 app/(dashboard)/assets/page.tsx                 // Company-scoped pages
-app/admin/companies/page.tsx                    // ⭐ System Administrators pages
+app/admin/companies/page.tsx                    // ⭐ admin pages
 app/admin/companies/[id]/page.tsx
 app/select-company/page.tsx
 
 // API Routes: route.ts in folders
 app/api/assets/route.ts                         // Company-scoped API
-app/api/admin/companies/route.ts                // ⭐ System Administrators API
+app/api/admin/companies/route.ts                // ⭐ admin API
 app/api/admin/companies/[id]/route.ts
 
 // Utilities: camelCase
@@ -204,7 +204,7 @@ components/asset_card.tsx           // Don't use snake_case
 app/api/Assets/Route.ts             // Don't capitalize route.ts
 lib/utils/format-date.ts            // Use camelCase for utils
 lib/hooks/CompanyContext.ts         // Must start with 'use'
-app/System Administrators/companies/page.tsx     // ❌ Use 'admin' not 'System Administrators'
+app/System Administrators/companies/page.tsx     // ❌ Use 'admin' not 'System Administrator'
 app/system/users/page.tsx           // ❌ Use 'admin' not 'system'
 ```
 
@@ -471,14 +471,14 @@ export async function POST(request: NextRequest) {
 AssetCore follows specific directory naming conventions to maintain consistency and clarity:
 
 - **Company-scoped pages**: `src/app/(dashboard)/`
-- **System Administrators pages**: `src/app/admin/` ⭐
-- **System Administrators NextJS API**: `src/app/api/admin/` ⭐
-- **System Administrators components**: `src/components/features/admin/` ⭐
+- **Admin pages**: `src/app/admin/` ⭐
+- **Admin NextJS API**: `src/app/api/admin/` ⭐
+- **Admin components**: `src/components/features/admin/` ⭐
 
 ### Access Control Patterns
 
 - **Dashboard routes**: Require authentication + company context
-- **Admin routes**: Require authentication + System Administrators role (no company context needed)
+- **Admin routes**: Require authentication + System Administrator role (no company context needed)
 
 ### Component Organization
 
@@ -584,12 +584,12 @@ export function removeActiveCompanyCookie(): void;
 
 ### Key Rules
 
-1. **✅ System Administrators pages**: MUST be in `src/app/admin/` directory
-2. **✅ System Administrators NextJS API routes**: MUST be in `src/app/api/admin/` directory
-3. **✅ System Administrators components**: SHOULD be in `src/components/features/admin/`
-4. **✅ Admin layout**: MUST check for System Administrators role in `src/app/admin/layout.tsx`
+1. **✅ Admin pages**: MUST be in `src/app/admin/` directory
+2. **✅ Admin NextJS API routes**: MUST be in `src/app/api/admin/` directory
+3. **✅ Admin components**: SHOULD be in `src/components/features/admin/`
+4. **✅ Admin layout**: MUST check for System Administrator role in `src/app/admin/layout.tsx`
 5. **✅ No company context**: Admin pages operate system-wide
-6. **✅ Consistent naming**: Use `admin` not `System Administrators` or `system` for directories
+6. **✅ Consistent naming**: Use `admin` for paths; use “System Administrator” only in copy/UI
 7. **✅ Client-side storage**: Always prefer cookies over localStorage for better security and SSR compatibility
 
 ### Benefits

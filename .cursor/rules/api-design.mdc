@@ -132,10 +132,50 @@ Note: `total_count` is optional to avoid expensive full-count queries. Provide i
 
 ### Rate Limiting
 
-- **Limit**: 1000 requests per hour per user
-- **Headers**: Rate limit information in response headers
-- **Burst Allowance**: Temporary burst capacity for legitimate usage
-- **Differentiated Limits**: Higher limits for authenticated vs anonymous users
+- **Library**: Use `rate-limiter-flexible` for API rate limiting
+- **Default Policy**: 1000 requests/hour per user (or IP if unauthenticated)
+- **Headers**: Include `X-Rate-Limit-Remaining` and `X-Rate-Limit-Reset` in responses
+- **Storage**: In-memory `RateLimiterMemory` by default; optionally Redis in production
+- **Scopes**: Prefer per-user (JWT `sub`) fallback to per-IP (`x-forwarded-for` or `request.ip`)
+
+```ts
+// Example usage in API route (simplified)
+import { NextRequest, NextResponse } from 'next/server';
+import { rateLimit } from '@/lib/rate-limit';
+
+export async function POST(request: NextRequest) {
+  const key = request.headers.get('authorization') ? 'user' : 'ip';
+  const id = key === 'user'
+    ? (request.headers.get('authorization') || 'anon')
+    : (request.headers.get('x-forwarded-for') || request.ip || 'anon');
+
+  const limited = await rateLimit(id);
+  if (!limited.ok) return limited.response;
+
+  // ... handler
+}
+```
+
+### Refresh Tokens Policy
+
+- **Storage**: Refresh tokens are stored server-side (hashed) and associated with `user_id`, `expires_at`, and status (active/revoked). For local/dev, an in-memory store is acceptable; in production, use database or Redis.
+- **Rotation**: On each successful refresh, the used refresh token is invalidated (rotated) and a new refresh token is issued. The new token replaces the old one in storage.
+- **Reuse Detection**: If a refresh token is presented that was already rotated or revoked, treat as a suspected compromise and revoke all active refresh tokens for that user.
+- **Revocation**: On logout or administrative action, revoke the presented refresh token (or all tokens for a user). Revoked tokens cannot be used again.
+- **Expiration**: Enforce server-side expiration regardless of client token content; expired tokens are considered invalid and removed.
+- **Transport**: Refresh tokens are returned in the response body; clients must store securely on the client side and send only to the refresh endpoint.
+
+**Endpoints**:
+- `POST /api/auth/refresh` – Validates, detects reuse, rotates, and returns new access/refresh tokens
+- `POST /api/auth/logout` – Optionally accepts the current refresh token and revokes it server-side (client still clears local storage)
+
+```ts
+// Refresh flow (high level)
+// 1) Verify refresh JWT signature and claims
+// 2) Check server store for token hash (exists, not expired, not revoked)
+// 3) Rotate (invalidate old, store new) + detect reuse
+// 4) Return new tokens
+```
 
 ## API Endpoint Structure
 
@@ -190,6 +230,45 @@ All resources are organized under company scope to ensure proper data isolation:
 ### Stateless API Design
 
 **API routes MUST be stateless and MUST NOT read or write cookies.**
+
+**CRITICAL BOUNDARY: API Routes vs App Routes**
+
+- **API Routes** (`app/api/**/route.ts`): MUST NOT access cookies at all. Authentication via JWT in `Authorization` header only.
+- **App Routes** (`app/**/page.tsx`, Server Components): May use cookies for client state management (e.g., active company selection), but should not rely on cookies for authentication (use JWT instead).
+
+**Enforcement:**
+
+```typescript
+// ✅ CORRECT: API route - no cookie access
+import { NextRequest, NextResponse } from 'next/server';
+// ❌ DO NOT import { cookies } from 'next/headers' in API routes
+
+export async function GET(request: NextRequest) {
+  // Get token from Authorization header only
+  const authHeader = request.headers.get('authorization');
+  const token = authHeader?.replace('Bearer ', '');
+  // ... process request
+}
+
+// ❌ WRONG: API route accessing cookies
+import { cookies } from 'next/headers'; // ❌ DON'T import this in API routes
+
+export async function GET() {
+  const cookieStore = await cookies(); // ❌ DON'T access cookies in API routes
+  const token = cookieStore.get('token')?.value; // ❌ DON'T
+}
+
+// ✅ CORRECT: App route (page) - cookies allowed for client state
+import { cookies } from 'next/headers'; // ✅ OK in app routes
+
+export default async function DashboardPage() {
+  const cookieStore = await cookies();
+  const activeCompanyId = cookieStore.get('active_company_id')?.value; // ✅ OK for client state
+  // But authentication still via JWT in headers when calling APIs
+}
+```
+
+**Key Principles:**
 
 - **No Cookie Management**: API routes do not read or write cookies (no exceptions)
 - **Client-Managed Tokens**: Tokens are returned in response bodies for client to manage

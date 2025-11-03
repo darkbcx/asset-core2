@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { verifyToken, mintTokensForUser } from '@/backend/authentication';
+import { verifyToken, mintTokensForUser, storeRefreshToken, revokeAllForUser } from '@/backend/authentication';
 import { getUserWithCompanies } from '@/backend/user';
 
 const setActiveCompanySchema = z.object({
@@ -60,6 +60,12 @@ export async function POST(request: NextRequest) {
     
     // Mint new JWTs embedding active company context
     const minted = mintTokensForUser(decoded.sub, validatedData.companyId);
+
+    // Revoke existing refresh tokens for this user and store the new one
+    revokeAllForUser(decoded.sub);
+    const refreshExpiresAt = Date.now() + (minted.expiresIn * 1000); // approximate; if separate refresh exp, adjust accordingly
+    storeRefreshToken(decoded.sub, minted.refreshToken, refreshExpiresAt);
+
     return NextResponse.json({
       success: true,
       companyId: validatedData.companyId,

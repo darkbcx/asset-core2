@@ -248,7 +248,7 @@ The permissions are stored in the `user_companies.permissions` JSON field as an 
 
 #### Permission Hierarchy Examples
 
-**System Administrators:**
+**System Administrator:**
 ```json
 {
   "permissions": ["*:*"]

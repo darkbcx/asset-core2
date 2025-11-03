@@ -30,6 +30,95 @@ import {
 } from "@/backend/user";
 import type { BackendResponse } from "@/backend/types";
 
+// ==========================================
+// Refresh Token Store (In-Memory Placeholder)
+// In production, back with DB/Redis. Tokens are hashed (sha256).
+// ==========================================
+import crypto from "crypto";
+
+interface StoredToken {
+  userId: string;
+  hash: string;
+  expiresAt: number; // epoch ms
+  revoked: boolean;
+}
+
+const rtTokens = new Map<string, StoredToken>(); // hash -> record
+const rtUserIndex = new Map<string, Set<string>>(); // userId -> set of hashes
+
+function sha256(value: string): string {
+  return crypto.createHash("sha256").update(value).digest("hex");
+}
+
+export function storeRefreshToken(userId: string, token: string, expiresAt: number): void {
+  const hash = sha256(token);
+  const record: StoredToken = { userId, hash, expiresAt, revoked: false };
+  rtTokens.set(hash, record);
+  if (!rtUserIndex.has(userId)) rtUserIndex.set(userId, new Set());
+  rtUserIndex.get(userId)!.add(hash);
+}
+
+export function revokeRefreshToken(token: string): void {
+  const hash = sha256(token);
+  const record = rtTokens.get(hash);
+  if (record) {
+    record.revoked = true;
+  }
+}
+
+export function revokeAllForUser(userId: string): void {
+  const set = rtUserIndex.get(userId);
+  if (set) {
+    for (const hash of set) {
+      const rec = rtTokens.get(hash);
+      if (rec) rec.revoked = true;
+    }
+  }
+}
+
+export function isRefreshTokenValid(userId: string, token: string): boolean {
+  const hash = sha256(token);
+  const record = rtTokens.get(hash);
+  if (!record) return false; // unknown token (reuse or invalid)
+  if (record.userId !== userId) return false;
+  if (record.revoked) return false;
+  if (Date.now() >= record.expiresAt) return false;
+  return true;
+}
+
+export function rotateRefreshToken(
+  userId: string,
+  oldToken: string,
+  newToken: string,
+  newExpiresAt: number
+): { ok: true } | { ok: false; reused: boolean } {
+  const oldHash = sha256(oldToken);
+  const oldRecord = rtTokens.get(oldHash);
+  if (!oldRecord) {
+    // Token not found => likely reuse attempt
+    revokeAllForUser(userId);
+    return { ok: false, reused: true };
+  }
+  if (oldRecord.revoked) {
+    // Already rotated/revoked => reuse
+    revokeAllForUser(userId);
+    return { ok: false, reused: true };
+  }
+  // Revoke old and store new
+  oldRecord.revoked = true;
+  const newHash = sha256(newToken);
+  const newRecord: StoredToken = {
+    userId,
+    hash: newHash,
+    expiresAt: newExpiresAt,
+    revoked: false,
+  };
+  rtTokens.set(newHash, newRecord);
+  if (!rtUserIndex.has(userId)) rtUserIndex.set(userId, new Set());
+  rtUserIndex.get(userId)!.add(newHash);
+  return { ok: true };
+}
+
 /**
  * JWT configuration
  */
@@ -133,6 +222,11 @@ export async function login(
 
     // Parse expires in to get numeric value
     const expiresIn = parseExpiresIn(JWT_EXPIRES_IN);
+    const refreshExpiresIn = parseExpiresIn(JWT_REFRESH_EXPIRES_IN);
+    const refreshExpiresAt = Date.now() + refreshExpiresIn * 1000;
+
+    // Store refresh token server-side (hashed)
+    storeRefreshToken(user.id, refreshToken, refreshExpiresAt);
 
     // Get user companies if tenant user
     let companies: Record<string, unknown>[] = [];
@@ -189,6 +283,13 @@ export async function refreshToken(
       };
     }
 
+    // Check server-side token store (valid, not revoked/expired)
+    if (!isRefreshTokenValid(userId, refreshToken)) {
+      // Reuse or invalid; revoke all to be safe
+      revokeAllForUser(userId);
+      return { success: false, error: "Invalid refresh token" };
+    }
+
     // Get user from database
     const userResult = await getUserById(userId);
 
@@ -224,6 +325,14 @@ export async function refreshToken(
     const newToken = generateToken(tokenData);
     const newRefreshToken = generateRefreshToken(tokenData);
     const expiresIn = parseExpiresIn(JWT_EXPIRES_IN);
+    const newRefreshExpiresIn = parseExpiresIn(JWT_REFRESH_EXPIRES_IN);
+    const newRefreshExpiresAt = Date.now() + newRefreshExpiresIn * 1000;
+
+    // Rotate refresh token (invalidate old, store new). Detect reuse.
+    const rotated = rotateRefreshToken(userId, refreshToken, newRefreshToken, newRefreshExpiresAt);
+    if (!rotated.ok) {
+      return { success: false, error: "Refresh token reuse detected" };
+    }
 
     return {
       success: true,

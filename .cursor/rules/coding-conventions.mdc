@@ -69,6 +69,12 @@ export async function GET(request: NextRequest) {
 
 **API routes MUST be stateless and not maintain any server-side session state or cookie management.**
 
+**CRITICAL BOUNDARY: Never import `cookies` from `next/headers` in API routes.**
+
+**File Path Rule:**
+- ❌ **`app/api/**/route.ts`**: NEVER import `{ cookies } from 'next/headers'`
+- ✅ **`app/**/page.tsx`** (Server Components): Cookies allowed for client state only
+
 Next.js API routes should follow RESTful principles:
 - **No Server-Side Sessions**: Do not store session data in memory or server-side state
 - **Stateless Requests**: Each request contains all necessary information
@@ -77,12 +83,14 @@ Next.js API routes should follow RESTful principles:
 - **Token-Based Auth**: Use JWT tokens sent in Authorization header or request body
 
 **Cookie Usage:**
-- ❌ **WRONG**: Reading cookies in API routes
+- ❌ **WRONG**: Reading cookies in API routes (`app/api/**/route.ts`)
 - ❌ **WRONG**: Writing/setting cookies in API routes
+- ❌ **WRONG**: Importing `{ cookies } from 'next/headers'` in API routes
 - ❌ **WRONG**: Maintaining server-side session stores
 - ❌ **WRONG**: Storing session data in memory or global variables
 - ✅ **CORRECT**: Returning tokens in response body for client to manage
 - ✅ **CORRECT**: Reading tokens from Authorization header or request body
+- ✅ **CORRECT**: Using cookies in app routes (pages) for client state management (not authentication)
 
 ```typescript
 // ✅ CORRECT: Stateless API route with token from Authorization header
@@ -372,13 +380,13 @@ const isAuthenticated = true;
 const hasPermission = false;
 const shouldRefetch = true;
 const canEdit = user.role === 'admin';
-const isSysAdmin = user.systemRole === 'System Administrators';  // ⭐ System Administrators check
+const isSysAdmin = user.systemRole === 'super_admin';  // ⭐ System Administrator check
 
 // Arrays: plural nouns
 const assets = await getAssets();
 const tickets = await getTickets();
 const maintenanceRecords = await getMaintenanceRecords();
-const companies = await getAllCompanies();          // ⭐ System-wide data
+const companies = await getAllCompanies();          // ⭐ System Administrator function
 
 // Single objects: singular nouns
 const asset = await getAssetById(id);
@@ -390,8 +398,8 @@ async function getAssets() { }
 async function createAsset() { }
 async function updateAssetStatus() { }
 async function deleteAsset() { }
-async function getAllCompanies() { }                // ⭐ System Administrators function
-async function getUserSystemRole() { }              // ⭐ System Administrators function
+async function getAllCompanies() { }                // ⭐ System Administrator function
+async function getUserSystemRole() { }              // ⭐ System Administrator function
 
 // Event handlers: 'handle' or 'on' prefix
 function handleSubmit() { }
@@ -426,7 +434,7 @@ const ASSET_STATUS = {
 } as const;
 
 const USER_ROLES = {
-  System Administrators: 'System Administrators',         // ⭐ System-wide role
+  SYSTEM_ADMINISTRATOR: 'system_admin',         // ⭐ System-wide user type
   ADMIN: 'admin',
   MANAGER: 'manager',
   TECHNICIAN: 'technician',
@@ -454,12 +462,12 @@ interface User {
   id: string;
   email: string;
   name: string;
-  systemRole?: string | null;   // ⭐ System Administrators role
+  systemRole?: string | null;   // ⭐ System Administrator role
 }
 
 // Types: noun or adjective + noun
 type AssetStatus = 'operational' | 'inactive' | 'maintenance';
-type UserRole = 'System Administrators' | 'admin' | 'manager' | 'technician' | 'field_ops';  // ⭐ includes System Administrators
+type UserRole = 'system_admin' | 'admin' | 'manager' | 'technician' | 'field_ops';  // ⭐ includes System Administrator
 type MaintenanceType = 'immediate' | 'scheduled';
 
 // Props: ComponentName + 'Props'

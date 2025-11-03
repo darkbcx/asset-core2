@@ -47,7 +47,7 @@ AssetCore leverages a modern, full-stack JavaScript ecosystem designed for scala
 - **Custom Auth System** - Email/password authentication
 - **bcryptjs** - Password hashing with salt rounds
 - **jsonwebtoken** - JWT token management
-- **express-rate-limit** - API rate limiting and DDoS protection
+- **rate-limiter-flexible** - API rate limiting (memory/Redis adapters)
 - **@next/cors** - Cross-origin request handling
 
 ### 2.4 File Management

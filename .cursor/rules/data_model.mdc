@@ -82,7 +82,7 @@ AssetCore implements a comprehensive database schema designed for multi-tenant a
 - **Operations Supervisor**: Operational continuity and performance monitoring
 - **Company Administrator**: Company-wide configuration and user management
 
-#### System Administrators (no company associations)
+#### System Administrator (no company associations)
 
 System administrators are identified by `user_type = 'system_admin'` and differentiated by the `system_role` field:
 
@@ -191,7 +191,7 @@ The AssetCore system implements a comprehensive role-based access control system
 The system uses two different storage mechanisms for permissions:
 
 **Tenant Users** - Permissions stored in `UserCompany.permissions` field (company-specific)
-**System Administrators** - Permissions stored in `User.system_permissions` field (platform-wide)
+**System Administrator** - Permissions stored in `User.system_permissions` field (platform-wide)
 
 Both use the same JSON format for granular permission configuration: an array of permission strings in the `[entity]:[action]` format (with wildcard support):
 
@@ -212,7 +212,7 @@ Both use the same JSON format for granular permission configuration: an array of
 }
 ```
 
-**For System Administrators**, permissions in the `User.system_permissions` field control:
+**For System Administrator**, permissions in the `User.system_permissions` field control:
 
 - Access to all tenant data across the platform
 - System configuration and settings management
