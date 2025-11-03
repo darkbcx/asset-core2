@@ -434,13 +434,14 @@ export async function listUsersPaginated(params?: {
   cursor?: string | null; // base64-encoded JSON: { createdAt: string, id: string }
   userType?: "tenant" | "system_admin";
   isActive?: boolean;
+  includeTotalCount?: boolean; // optional, when true compute total_count (expensive)
 }): Promise<BackendResponse<{
   users: User[];
   pagination: {
     cursor: string | null;
     limit: number;
     has_more: boolean;
-    total_count: number;
+    total_count?: number;
   };
 }>> {
   try {
@@ -480,14 +481,17 @@ export async function listUsersPaginated(params?: {
       whereParams.push(new Date(cursorCreatedAt), new Date(cursorCreatedAt), cursorId);
     }
 
-    // Total count (without cursor limitation for accurate has_more signal)
-    const countQuery = `
-      SELECT COUNT(*) as count
-      FROM users
-      WHERE ${whereClauses.join(" AND ")}
-    `;
-    const [countRows] = await db.execute<{ count: number }>(countQuery, whereParams);
-    const totalCount = countRows?.[0]?.count ?? 0;
+    // Total count is optional to reduce cost
+    let totalCount: number | undefined = undefined;
+    if (params?.includeTotalCount) {
+      const countQuery = `
+        SELECT COUNT(*) as count
+        FROM users
+        WHERE ${whereClauses.join(" AND ")}
+      `;
+      const [countRows] = await db.execute<{ count: number }>(countQuery, whereParams);
+      totalCount = countRows?.[0]?.count ?? 0;
+    }
 
     // Page query with limit+1 fetch to determine has_more
     const pageQuery = `

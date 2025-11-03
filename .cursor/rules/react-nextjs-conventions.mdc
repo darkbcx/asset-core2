@@ -497,85 +497,20 @@ AssetCore follows specific directory naming conventions to maintain consistency 
 
 ### Active Company Context
 
-AssetCore implements a cookie-based active company context for multi-company tenant users.
+AssetCore carries the active company context in the JWT claim `active_company_id` for multi-company tenant users.
 
-**Purpose:** Track and persist the user's selected active company across the application for proper data isolation and UI personalization.
+**Purpose:** Provide company scoping to backend APIs without cookies, keeping API routes fully stateless.
 
-**Implementation:**
+**Flow:**
+- User logs in and receives JWT (no active company set yet)
+- User selects a company via `/api/auth/set-active-company` → backend verifies access and reissues JWT/refresh tokens including `active_company_id`
+- Client stores the returned tokens and includes the access token in the `Authorization` header for subsequent requests
 
-```typescript
-// ✅ CORRECT: Access active company from cookies
-import { cookies } from 'next/headers';
-
-export async function getActiveCompanyId() {
-  const cookieStore = await cookies();
-  const activeCompanyId = cookieStore.get('active_company_id')?.value;
-  return activeCompanyId;
-}
-
-// ✅ CORRECT: Set active company in cookies
-import { cookies } from 'next/headers';
-
-export async function setActiveCompany(companyId: string) {
-  const cookieStore = await cookies();
-  cookieStore.set('active_company_id', companyId, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    maxAge: 60 * 60 * 24 * 7, // 7 days
-  });
-}
-
-// ✅ CORRECT: Remove active company on logout
-import { cookies } from 'next/headers';
-
-export async function clearActiveCompany() {
-  const cookieStore = await cookies();
-  cookieStore.delete('active_company_id');
-}
-```
-
-**Cookie Management:**
-
-- **Storage**: HTTP-only cookie for security (`active_company_id`)
-- **Scope**: Only tenant users (not System Administrators)
-- **Lifetime**: Persists for 7 days, removed on logout
-- **Validation**: Always verify user has access to the stored company_id
-- **Fallback**: If cookie missing/invalid, redirect to company selection page
-
-**Business Rules:**
-
-- Tenant users can switch between their associated companies
-- Active company determines data isolation in all API calls
-- System Administrators don't use this context (operate system-wide)
-- Cookie is cleared on logout for security
-- Cookie value must match user's accessible companies list
+**Usage in API routes:**
+- API routes must extract company context from the JWT only; cookies are not accessed.
 
 **Usage in Components:**
-
-```typescript
-// ✅ CORRECT: Use active company in server components
-import { getActiveCompanyId } from '@/lib/auth';
-
-export default async function AssetsPage() {
-  const companyId = await getActiveCompanyId();
-  
-  if (!companyId) {
-    redirect('/select-company');
-  }
-  
-  const assets = await getAssets(companyId);
-  return <AssetList assets={assets} />;
-}
-```
-
-**Key Points:**
-
-- ✅ Store in HTTP-only cookies for security
-- ✅ Validate company access before using context
-- ✅ Clear on logout
-- ✅ Provide company switcher UI
-- ✅ Redirect to company selection if no active company
+- Frontend should treat the active company as client state and/or decode `active_company_id` from the access token if needed; when switching company, call the set-active-company endpoint and replace tokens.
 
 ### Client-Side Storage Guidelines
 

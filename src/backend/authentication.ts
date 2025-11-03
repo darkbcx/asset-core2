@@ -65,6 +65,7 @@ export interface RefreshTokenResponse {
  */
 export interface JWTCustomClaims extends jwt.JwtPayload {
   sub: string; // Subject claim (user ID)
+  active_company_id?: string; // Active company context for tenant users
 }
 
 /**
@@ -118,7 +119,7 @@ export async function login(
     // Update last login timestamp
     await updateLastLogin(user.id);
 
-    // Generate JWT tokens with standard claims only
+    // Generate JWT tokens with standard claims only (no active company set yet)
     const now = Math.floor(Date.now() / 1000); // Current timestamp in seconds
     const tokenData = {
       sub: user.id, // Subject (user ID) - only claim needed
@@ -208,14 +209,17 @@ export async function refreshToken(
       };
     }
 
-    // Generate new tokens with standard claims only
+    // Generate new tokens; preserve active company claim if present on refresh token
     const now = Math.floor(Date.now() / 1000); // Current timestamp in seconds
-    const tokenData = {
-      sub: user.id, // Subject (user ID) - only claim needed
-      iat: now, // Issued at
-      aud: "assetcore-client", // Audience
-      iss: "assetcore", // Issuer
+    const tokenData: Record<string, unknown> = {
+      sub: user.id,
+      iat: now,
+      aud: "assetcore-client",
+      iss: "assetcore",
     };
+    if ((decoded as JWTCustomClaims).active_company_id) {
+      tokenData.active_company_id = (decoded as JWTCustomClaims).active_company_id;
+    }
 
     const newToken = generateToken(tokenData);
     const newRefreshToken = generateRefreshToken(tokenData);
@@ -458,6 +462,29 @@ function generateRefreshToken(data: Record<string, unknown>): string {
       // audience: "assetcore-client",
     } as jwt.SignOptions
   );
+}
+
+/**
+ * Mint access and refresh tokens for a user with optional active company context
+ */
+export function mintTokensForUser(
+  userId: string,
+  activeCompanyId?: string
+): { token: string; refreshToken: string; expiresIn: number } {
+  const now = Math.floor(Date.now() / 1000);
+  const payload: Record<string, unknown> = {
+    sub: userId,
+    iat: now,
+    aud: "assetcore-client",
+    iss: "assetcore",
+  };
+  if (activeCompanyId) {
+    payload.active_company_id = activeCompanyId;
+  }
+  const token = generateToken(payload);
+  const refresh = generateRefreshToken(payload);
+  const expiresIn = parseExpiresIn(JWT_EXPIRES_IN);
+  return { token, refreshToken: refresh, expiresIn };
 }
 
 /**

@@ -821,12 +821,12 @@ const fileRoutes = {
     description: "Upload a new file",
     parameters: {
       entityType: "asset | component | maintenance",
-      entityId: "UUID",
+      entityId: "string (UUID v4)",
       file: "File object",
       metadata: "JSON object",
     },
     response: {
-      fileId: "UUID",
+      fileId: "string (UUID v4)",
       url: "string",
       metadata: "object",
     },
@@ -846,7 +846,7 @@ const fileRoutes = {
     description: "List files for an entity",
     parameters: {
       entityType: "asset | component | maintenance",
-      entityId: "UUID",
+      entityId: "string (UUID v4)",
       page: "number",
       limit: "number",
     },

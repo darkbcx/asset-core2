@@ -51,7 +51,7 @@ AssetCore leverages a modern, full-stack JavaScript ecosystem designed for scala
 - **@next/cors** - Cross-origin request handling
 
 ### 2.4 File Management
-- **multer 1.x** - Multipart file upload handling
+- **Next.js App Router formData()** - Built-in multipart handling via `request.formData()`
 - **Custom Storage Wrapper** - Abstraction for multiple cloud providers (AWS S3, Google Cloud, Azure)
 - **sharp** - High-performance image processing
 - **file-type** - MIME type detection and validation

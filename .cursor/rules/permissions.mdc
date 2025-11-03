@@ -10,6 +10,17 @@ alwaysApply: true
 
 AssetCore implements a granular permission system that supports both tenant-specific users and platform-wide system administrators. The permission system ensures proper data isolation, security, and operational efficiency across all user roles.
 
+### Definitions
+
+- **User Types**
+  - `tenant`: Company-scoped users whose permissions come from `UserCompany.permissions`.
+  - `system_admin`: Platform-wide users. This user type has a `system_role` field.
+- **System Admin Roles** (`User.system_role` when `user_type = 'system_admin'`)
+  - `super_admin`: Full platform access. Equivalent to `permissions = ["*:*"]`.
+  - `support_admin`: Read-oriented support access with limited updates.
+
+Throughout the documentation, “System Administrator(s)” refers to users with `user_type = 'system_admin'`, and the specific capability level is governed by `system_role` (`super_admin` or `support_admin`).
+
 ### Permission Categories
 
 - **Assets**: Asset management and tracking permissions
@@ -211,7 +222,7 @@ The AssetCore permission system uses a hierarchical `[entity]:[action]` format w
 
 ### Database Schema
 
-The permissions are stored in the `user_companies.permissions` JSONB field as an array of permission strings:
+The permissions are stored in the `user_companies.permissions` JSON field as an array of permission strings:
 
 ```json
 {

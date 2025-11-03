@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { verifyToken } from '@/backend/authentication';
+import { verifyToken, mintTokensForUser } from '@/backend/authentication';
 import { getUserWithCompanies } from '@/backend/user';
 
 const setActiveCompanySchema = z.object({
@@ -58,10 +58,14 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // Return active company ID - client will store it
+    // Mint new JWTs embedding active company context
+    const minted = mintTokensForUser(decoded.sub, validatedData.companyId);
     return NextResponse.json({
       success: true,
       companyId: validatedData.companyId,
+      token: minted.token,
+      refreshToken: minted.refreshToken,
+      expiresIn: minted.expiresIn,
     });
   } catch (error) {
     if (error instanceof z.ZodError) {

@@ -27,11 +27,11 @@ AssetCore implements a comprehensive database schema designed for multi-tenant a
 
 | Field               | Type         | Description                    | Constraints      |
 | ------------------- | ------------ | ------------------------------ | ---------------- |
-| `id`                | UUID         | Primary key                    | NOT NULL, UNIQUE |
+| `id`                | CHAR(36)     | Primary key                    | NOT NULL, UNIQUE |
 | `name`              | VARCHAR(255) | Company name                   | NOT NULL         |
 | `slug`              | VARCHAR(100) | URL-friendly identifier        | NOT NULL, UNIQUE |
 | `domain`            | VARCHAR(255) | Custom domain for SSO          | NULLABLE         |
-| `settings`          | JSONB        | Company-specific configuration | DEFAULT '{}'     |
+| `settings`          | JSON         | Company-specific configuration | DEFAULT '{}'     |
 | `subscription_plan` | VARCHAR(50)  | Current subscription tier      | DEFAULT 'basic'  |
 | `is_active`         | BOOLEAN      | Account status                 | DEFAULT true     |
 | `created_at`        | TIMESTAMP    | Creation timestamp             | NOT NULL         |
@@ -40,7 +40,7 @@ AssetCore implements a comprehensive database schema designed for multi-tenant a
 **Key Features:**
 
 - Unique slug for URL-friendly identification
-- JSONB settings for flexible configuration
+- JSON settings for flexible configuration
 - Subscription plan tracking for billing
 - Soft delete capability with is_active flag
 
@@ -50,10 +50,10 @@ AssetCore implements a comprehensive database schema designed for multi-tenant a
 
 | Field                | Type         | Description                           | Constraints      |
 | -------------------- | ------------ | ------------------------------------- | ---------------- |
-| `id`                 | UUID         | Primary key                           | NOT NULL, UNIQUE |
+| `id`                 | CHAR(36)     | Primary key                           | NOT NULL, UNIQUE |
 | `user_type`          | VARCHAR(20)  | User type: 'tenant' or 'system_admin' | NOT NULL         |
 | `system_role`        | VARCHAR(50)  | System role (only for system_admin)   | NULLABLE         |
-| `system_permissions` | JSONB        | System administrator permissions      | NULLABLE         |
+| `system_permissions` | JSON         | System administrator permissions      | NULLABLE         |
 | `email`              | VARCHAR(255) | User email address                    | NOT NULL, UNIQUE |
 | `first_name`         | VARCHAR(100) | User's first name                     | NOT NULL         |
 | `last_name`          | VARCHAR(100) | User's last name                      | NULLABLE         |
@@ -67,7 +67,7 @@ AssetCore implements a comprehensive database schema designed for multi-tenant a
 
 - **Dual User Types**: Supports both tenant users and system administrators
 - **System Roles**: For system administrators, the `system_role` field distinguishes between 'Super Administrator' and 'Support Administrator'
-- **System Permissions**: The `system_permissions` field stores granular permissions for system administrators (stored as JSONB)
+- **System Permissions**: The `system_permissions` field stores granular permissions for system administrators (stored as JSON)
 - **Multi-Company Support**: Users can be associated with multiple companies via UserCompany
 - **Security Features**: Password hashing and login tracking
 - **Soft Delete**: Account deactivation with is_active flag
@@ -87,10 +87,10 @@ AssetCore implements a comprehensive database schema designed for multi-tenant a
 System administrators are identified by `user_type = 'system_admin'` and differentiated by the `system_role` field:
 
 - **Super Administrator**: Platform-wide management and configuration
-  - `system_role = 'super_admin'` (or 'Super Administrators')
+  - `system_role = 'super_admin'`
   - Full access to all platform features and tenant data
 - **Support Administrator**: Technical support and user assistance
-  - `system_role = 'support_admin'` (or 'Support Administrator')
+  - `system_role = 'support_admin'`
   - Read-only access to tenant data for troubleshooting
 
 ### UserCompany
@@ -99,11 +99,11 @@ System administrators are identified by `user_type = 'system_admin'` and differe
 
 | Field         | Type        | Description                   | Constraints      |
 | ------------- | ----------- | ----------------------------- | ---------------- |
-| `id`          | UUID        | Primary key                   | NOT NULL, UNIQUE |
-| `user_id`     | UUID        | Foreign key to User           | NOT NULL, FK     |
-| `company_id`  | UUID        | Foreign key to Company        | NOT NULL, FK     |
+| `id`          | CHAR(36)    | Primary key                   | NOT NULL, UNIQUE |
+| `user_id`     | CHAR(36)    | Foreign key to User           | NOT NULL, FK     |
+| `company_id`  | CHAR(36)    | Foreign key to Company        | NOT NULL, FK     |
 | `role`        | VARCHAR(50) | User role within this company | NOT NULL         |
-| `permissions` | JSONB       | Company-specific permissions  | DEFAULT '{}'     |
+| `permissions` | JSON        | Company-specific permissions  | DEFAULT '{}'     |
 | `is_active`   | BOOLEAN     | Association status            | DEFAULT true     |
 | `is_primary`  | BOOLEAN     | Primary company for user      | DEFAULT false    |
 | `joined_at`   | TIMESTAMP   | When user joined this company | NOT NULL         |
@@ -193,33 +193,22 @@ The system uses two different storage mechanisms for permissions:
 **Tenant Users** - Permissions stored in `UserCompany.permissions` field (company-specific)
 **System Administrators** - Permissions stored in `User.system_permissions` field (platform-wide)
 
-Both use the same JSONB format for granular permission configuration:
+Both use the same JSON format for granular permission configuration: an array of permission strings in the `[entity]:[action]` format (with wildcard support):
 
 ```json
 {
-  "assets": {
-    "create": true,
-    "read": true,
-    "update": true,
-    "delete": false
-  },
-  "maintenance": {
-    "create": true,
-    "read": true,
-    "update": true,
-    "delete": false,
-    "assign": true
-  },
-  "users": {
-    "create": false,
-    "read": true,
-    "update": false,
-    "delete": false
-  },
-  "reports": {
-    "generate": true,
-    "export": true
-  }
+  "permissions": [
+    "assets:create",
+    "assets:read",
+    "assets:update",
+    "maintenance:create",
+    "maintenance:read",
+    "maintenance:update",
+    "maintenance:assign",
+    "users:read",
+    "reports:generate",
+    "reports:export"
+  ]
 }
 ```
 
@@ -244,27 +233,27 @@ Both use the same JSONB format for granular permission configuration:
 
 | Field             | Type          | Description                          | Constraints      |
 | ----------------- | ------------- | ------------------------------------ | ---------------- |
-| `id`              | UUID          | Primary key                          | NOT NULL, UNIQUE |
-| `company_id`      | UUID          | Foreign key to Company               | NOT NULL, FK     |
+| `id`              | CHAR(36)      | Primary key                          | NOT NULL, UNIQUE |
+| `company_id`      | CHAR(36)      | Foreign key to Company               | NOT NULL, FK     |
 | `asset_code`      | VARCHAR(100)  | Unique asset identifier              | NOT NULL         |
 | `name`            | VARCHAR(255)  | Asset name/description               | NOT NULL         |
 | `type`            | VARCHAR(100)  | Asset type (aircraft, vehicle, etc.) | NOT NULL         |
 | `model`           | VARCHAR(255)  | Asset model/manufacturer             | NULLABLE         |
 | `serial_number`   | VARCHAR(255)  | Manufacturer serial number           | NULLABLE         |
 | `status`          | VARCHAR(50)   | Current operational status           | NOT NULL         |
-| `location_id`     | UUID          | Foreign key to Location              | NULLABLE, FK     |
+| `location_id`     | CHAR(36)      | Foreign key to Location              | NULLABLE, FK     |
 | `purchase_date`   | DATE          | Asset acquisition date               | NULLABLE         |
 | `warranty_expiry` | DATE          | Warranty expiration date             | NULLABLE         |
 | `purchase_cost`   | DECIMAL(15,2) | Original purchase price              | NULLABLE         |
 | `current_value`   | DECIMAL(15,2) | Current estimated value              | NULLABLE         |
-| `specifications`  | JSONB         | Additional asset specifications      | DEFAULT '{}'     |
+| `specifications`  | JSON          | Additional asset specifications      | DEFAULT '{}'     |
 | `created_at`      | TIMESTAMP     | Creation timestamp                   | NOT NULL         |
 | `updated_at`      | TIMESTAMP     | Last update timestamp                | NOT NULL         |
 
 **Key Features:**
 
 - Unique asset codes within company scope
-- Flexible specifications using JSONB
+- Flexible specifications using JSON
 - Financial tracking with purchase and current values
 - Location-based asset organization
 - Status tracking for operational management
@@ -275,8 +264,8 @@ Both use the same JSONB format for granular permission configuration:
 
 | Field               | Type          | Description                 | Constraints      |
 | ------------------- | ------------- | --------------------------- | ---------------- |
-| `id`                | UUID          | Primary key                 | NOT NULL, UNIQUE |
-| `asset_id`          | UUID          | Foreign key to Asset        | NOT NULL, FK     |
+| `id`                | CHAR(36)      | Primary key                 | NOT NULL, UNIQUE |
+| `asset_id`          | CHAR(36)      | Foreign key to Asset        | NOT NULL, FK     |
 | `component_code`    | VARCHAR(100)  | Unique component identifier | NOT NULL         |
 | `name`              | VARCHAR(255)  | Component name/description  | NOT NULL         |
 | `type`              | VARCHAR(100)  | Component type              | NOT NULL         |
@@ -288,7 +277,7 @@ Both use the same JSONB format for granular permission configuration:
 | `installation_date` | DATE          | Date of installation        | NULLABLE         |
 | `warranty_expiry`   | DATE          | Component warranty expiry   | NULLABLE         |
 | `purchase_cost`     | DECIMAL(15,2) | Component purchase price    | NULLABLE         |
-| `specifications`    | JSONB         | Additional specifications   | DEFAULT '{}'     |
+| `specifications`    | JSON          | Additional specifications   | DEFAULT '{}'     |
 | `created_at`        | TIMESTAMP     | Creation timestamp          | NOT NULL         |
 | `updated_at`        | TIMESTAMP     | Last update timestamp       | NOT NULL         |
 
@@ -297,7 +286,7 @@ Both use the same JSONB format for granular permission configuration:
 - Component-level granularity for detailed tracking
 - Position tracking within assets
 - Warranty and cost management
-- Flexible specifications with JSONB
+- Flexible specifications with JSON
 - Status tracking for maintenance planning
 
 ### MaintenanceRecord
@@ -306,9 +295,9 @@ Both use the same JSONB format for granular permission configuration:
 
 | Field                    | Type          | Description                        | Constraints      |
 | ------------------------ | ------------- | ---------------------------------- | ---------------- |
-| `id`                     | UUID          | Primary key                        | NOT NULL, UNIQUE |
-| `component_id`           | UUID          | Foreign key to Component           | NOT NULL, FK     |
-| `assigned_technician_id` | UUID          | Foreign key to User                | NULLABLE, FK     |
+| `id`                     | CHAR(36)      | Primary key                        | NOT NULL, UNIQUE |
+| `component_id`           | CHAR(36)      | Foreign key to Component           | NOT NULL, FK     |
+| `assigned_technician_id` | CHAR(36)      | Foreign key to User                | NULLABLE, FK     |
 | `title`                  | VARCHAR(255)  | Maintenance title/description      | NOT NULL         |
 | `description`            | TEXT          | Detailed maintenance description   | NULLABLE         |
 | `maintenance_type`       | VARCHAR(20)   | Type: 'scheduled' or 'on_demand'   | NOT NULL         |
@@ -351,9 +340,9 @@ Both use the same JSONB format for granular permission configuration:
 
 | Field         | Type         | Description                                 | Constraints      |
 | ------------- | ------------ | ------------------------------------------- | ---------------- |
-| `id`          | UUID         | Primary key                                 | NOT NULL, UNIQUE |
-| `company_id`  | UUID         | Foreign key to Company                      | NOT NULL, FK     |
-| `parent_id`   | UUID         | Foreign key to Location (self-reference)    | NULLABLE, FK     |
+| `id`          | CHAR(36)     | Primary key                                 | NOT NULL, UNIQUE |
+| `company_id`  | CHAR(36)     | Foreign key to Company                      | NOT NULL, FK     |
+| `parent_id`   | CHAR(36)     | Foreign key to Location (self-reference)    | NULLABLE, FK     |
 | `name`        | VARCHAR(255) | Location name                               | NOT NULL         |
 | `type`        | VARCHAR(50)  | Location type (site, building, floor, room) | NOT NULL         |
 | `address`     | TEXT         | Physical address                            | NULLABLE         |
@@ -377,13 +366,13 @@ Both use the same JSONB format for granular permission configuration:
 
 | Field           | Type         | Description                 | Constraints      |
 | --------------- | ------------ | --------------------------- | ---------------- |
-| `id`            | UUID         | Primary key                 | NOT NULL, UNIQUE |
-| `component_id`  | UUID         | Foreign key to Component    | NOT NULL, FK     |
-| `from_asset_id` | UUID         | Source asset                | NOT NULL, FK     |
-| `to_asset_id`   | UUID         | Destination asset           | NOT NULL, FK     |
+| `id`            | CHAR(36)     | Primary key                 | NOT NULL, UNIQUE |
+| `component_id`  | CHAR(36)     | Foreign key to Component    | NOT NULL, FK     |
+| `from_asset_id` | CHAR(36)     | Source asset                | NOT NULL, FK     |
+| `to_asset_id`   | CHAR(36)     | Destination asset           | NOT NULL, FK     |
 | `transfer_date` | TIMESTAMP    | Transfer timestamp          | NOT NULL         |
 | `reason`        | VARCHAR(255) | Transfer reason             | NULLABLE         |
-| `performed_by`  | UUID         | User who performed transfer | NOT NULL, FK     |
+| `performed_by`  | CHAR(36)     | User who performed transfer | NOT NULL, FK     |
 | `notes`         | TEXT         | Transfer notes              | NULLABLE         |
 
 **Key Features:**
@@ -398,13 +387,13 @@ Both use the same JSONB format for granular permission configuration:
 
 | Field                   | Type         | Description                      | Constraints      |
 | ----------------------- | ------------ | -------------------------------- | ---------------- |
-| `id`                    | UUID         | Primary key                      | NOT NULL, UNIQUE |
-| `maintenance_record_id` | UUID         | Foreign key to MaintenanceRecord | NOT NULL, FK     |
+| `id`                    | CHAR(36)     | Primary key                      | NOT NULL, UNIQUE |
+| `maintenance_record_id` | CHAR(36)     | Foreign key to MaintenanceRecord | NOT NULL, FK     |
 | `file_name`             | VARCHAR(255) | Original file name               | NOT NULL         |
 | `file_path`             | VARCHAR(500) | Storage path                     | NOT NULL         |
 | `file_size`             | BIGINT       | File size in bytes               | NOT NULL         |
 | `mime_type`             | VARCHAR(100) | File MIME type                   | NOT NULL         |
-| `uploaded_by`           | UUID         | User who uploaded file           | NOT NULL, FK     |
+| `uploaded_by`           | CHAR(36)     | User who uploaded file           | NOT NULL, FK     |
 | `uploaded_at`           | TIMESTAMP    | Upload timestamp                 | NOT NULL         |
 
 **Key Features:**
@@ -419,14 +408,14 @@ Both use the same JSONB format for granular permission configuration:
 
 | Field         | Type         | Description            | Constraints      |
 | ------------- | ------------ | ---------------------- | ---------------- |
-| `id`          | UUID         | Primary key            | NOT NULL, UNIQUE |
-| `company_id`  | UUID         | Foreign key to Company | NOT NULL, FK     |
-| `user_id`     | UUID         | Foreign key to User    | NULLABLE, FK     |
+| `id`          | CHAR(36)     | Primary key            | NOT NULL, UNIQUE |
+| `company_id`  | CHAR(36)     | Foreign key to Company | NOT NULL, FK     |
+| `user_id`     | CHAR(36)     | Foreign key to User    | NULLABLE, FK     |
 | `action`      | VARCHAR(100) | Action performed       | NOT NULL         |
 | `entity_type` | VARCHAR(100) | Entity affected        | NOT NULL         |
-| `entity_id`   | UUID         | Entity identifier      | NOT NULL         |
-| `old_values`  | JSONB        | Previous values        | NULLABLE         |
-| `new_values`  | JSONB        | New values             | NULLABLE         |
+| `entity_id`   | CHAR(36)     | Entity identifier      | NOT NULL         |
+| `old_values`  | JSON         | Previous values        | NULLABLE         |
+| `new_values`  | JSON         | New values             | NULLABLE         |
 | `ip_address`  | INET         | User IP address        | NULLABLE         |
 | `user_agent`  | TEXT         | User agent string      | NULLABLE         |
 | `created_at`  | TIMESTAMP    | Action timestamp       | NOT NULL         |
@@ -444,10 +433,10 @@ Both use the same JSONB format for granular permission configuration:
 
 | Field             | Type         | Description                                 | Constraints      |
 | ----------------- | ------------ | ------------------------------------------- | ---------------- |
-| `id`              | UUID         | Primary key                                 | NOT NULL, UNIQUE |
-| `company_id`      | UUID         | Foreign key to Company                      | NOT NULL, FK     |
+| `id`              | CHAR(36)     | Primary key                                 | NOT NULL, UNIQUE |
+| `company_id`      | CHAR(36)     | Foreign key to Company                      | NOT NULL, FK     |
 | `entity_type`     | VARCHAR(50)  | Entity type (asset, component, maintenance) | NOT NULL         |
-| `entity_id`       | UUID         | Entity identifier                           | NOT NULL         |
+| `entity_id`       | CHAR(36)     | Entity identifier                           | NOT NULL         |
 | `file_name`       | VARCHAR(255) | Generated file name                         | NOT NULL         |
 | `original_name`   | VARCHAR(255) | Original file name                          | NOT NULL         |
 | `file_path`       | VARCHAR(500) | Storage path                                | NOT NULL         |
@@ -456,9 +445,9 @@ Both use the same JSONB format for granular permission configuration:
 | `file_hash`       | VARCHAR(64)  | SHA-256 hash for deduplication              | NOT NULL         |
 | `storage_backend` | VARCHAR(50)  | Storage backend (local, s3, hybrid)         | NOT NULL         |
 | `storage_path`    | VARCHAR(500) | Backend-specific storage path               | NOT NULL         |
-| `metadata`        | JSONB        | Additional file metadata                    | DEFAULT '{}'     |
+| `metadata`        | JSON         | Additional file metadata                    | DEFAULT '{}'     |
 | `is_public`       | BOOLEAN      | Public access flag                          | DEFAULT false    |
-| `uploaded_by`     | UUID         | Foreign key to User                         | NOT NULL, FK     |
+| `uploaded_by`     | CHAR(36)     | Foreign key to User                         | NOT NULL, FK     |
 | `uploaded_at`     | TIMESTAMP    | Upload timestamp                            | NOT NULL         |
 | `updated_at`      | TIMESTAMP    | Last update timestamp                       | NOT NULL         |
 | `deleted_at`      | TIMESTAMP    | Soft delete timestamp                       | NULLABLE         |
@@ -478,14 +467,14 @@ Both use the same JSONB format for granular permission configuration:
 
 | Field                | Type         | Description                   | Constraints      |
 | -------------------- | ------------ | ----------------------------- | ---------------- |
-| `id`                 | UUID         | Primary key                   | NOT NULL, UNIQUE |
-| `file_id`            | UUID         | Foreign key to Files          | NOT NULL, FK     |
+| `id`                 | CHAR(36)     | Primary key                   | NOT NULL, UNIQUE |
+| `file_id`            | CHAR(36)     | Foreign key to Files          | NOT NULL, FK     |
 | `version_number`     | INTEGER      | Version number                | NOT NULL         |
 | `file_path`          | VARCHAR(500) | Version-specific storage path | NOT NULL         |
 | `file_size`          | BIGINT       | File size in bytes            | NOT NULL         |
 | `file_hash`          | VARCHAR(64)  | SHA-256 hash of this version  | NOT NULL         |
 | `change_description` | TEXT         | Description of changes made   | NULLABLE         |
-| `created_by`         | UUID         | Foreign key to User           | NOT NULL, FK     |
+| `created_by`         | CHAR(36)     | Foreign key to User           | NOT NULL, FK     |
 | `created_at`         | TIMESTAMP    | Version creation timestamp    | NOT NULL         |
 
 **Key Features:**
@@ -501,9 +490,9 @@ Both use the same JSONB format for granular permission configuration:
 
 | Field         | Type        | Description                               | Constraints      |
 | ------------- | ----------- | ----------------------------------------- | ---------------- |
-| `id`          | UUID        | Primary key                               | NOT NULL, UNIQUE |
-| `file_id`     | UUID        | Foreign key to Files                      | NOT NULL, FK     |
-| `user_id`     | UUID        | Foreign key to User                       | NULLABLE, FK     |
+| `id`          | CHAR(36)    | Primary key                               | NOT NULL, UNIQUE |
+| `file_id`     | CHAR(36)    | Foreign key to Files                      | NOT NULL, FK     |
+| `user_id`     | CHAR(36)    | Foreign key to User                       | NULLABLE, FK     |
 | `action`      | VARCHAR(50) | Action performed (view, download, delete) | NOT NULL         |
 | `ip_address`  | INET        | User IP address                           | NULLABLE         |
 | `user_agent`  | TEXT        | User agent string                         | NULLABLE         |
@@ -579,8 +568,8 @@ Optimizing query performance with strategic indexes:
 
 ### MySQL 8.x Specific Features
 
-- **UUID Support**: Using UUID data type for primary keys
-- **JSONB Support**: Leveraging JSON data type for flexible specifications
+- **ID Storage**: IDs are stored as CHAR(36) and generated by the application (UUID v4 strings)
+- **JSON Support**: Leveraging JSON data type for flexible specifications
 - **Spatial Data**: Using POINT data type for GPS coordinates
 - **Generated Columns**: For computed fields and derived data
 

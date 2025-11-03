@@ -118,8 +118,7 @@ X-Rate-Limit-Reset: <timestamp>
   "pagination": {
     "cursor": "eyJpZCI6MTIzfQ==",
     "limit": 50,
-    "has_more": true,
-    "total_count": 1250
+    "has_more": true
   }
 }
 ```
@@ -128,6 +127,8 @@ X-Rate-Limit-Reset: <timestamp>
 - `limit`: Number of items per page (default: 50, max: 100)
 - `cursor`: Base64-encoded cursor for pagination
 - `sort`: Field to sort by (e.g., `created_at`, `-name` for descending)
+
+Note: `total_count` is optional to avoid expensive full-count queries. Provide it only when requested (e.g., `?includeTotalCount=true`) or expose a separate lightweight endpoint for counts.
 
 ### Rate Limiting
 
@@ -188,11 +189,12 @@ All resources are organized under company scope to ensure proper data isolation:
 
 ### Stateless API Design
 
-**API routes MUST be stateless and not manage cookies or server-side session state.**
+**API routes MUST be stateless and MUST NOT read or write cookies.**
 
-- **No Cookie Management**: API routes do not read or write cookies
+- **No Cookie Management**: API routes do not read or write cookies (no exceptions)
 - **Client-Managed Tokens**: Tokens are returned in response bodies for client to manage
 - **Authorization Header**: Tokens sent via `Authorization: Bearer <token>` header
+- **Company Context in JWT**: Active company context is carried in the JWT claim `active_company_id`
 - **Stateless Requests**: Each request is independent and self-contained
 - **Horizontal Scaling**: Stateless design enables easy horizontal scaling
 
@@ -300,6 +302,10 @@ const [rows] = await connection.query(query, [id]); // Use execute() instead
 
 AssetCore standardizes permission checks across API routes and the web frontend using shared helpers.
 
+System administrator terminology:
+- `system_admin` is a user type (platform scope)
+- `system_role` within `system_admin` is either `super_admin` (all permissions: `*:*`) or `support_admin` (read-focused support)
+
 - Generic evaluator (shared): `src/lib/permissions.ts`
   - `checkPermissionsForContext(context, required, mode)` merges role-derived and explicit permissions and evaluates them.
 
@@ -314,7 +320,7 @@ AssetCore standardizes permission checks across API routes and the web frontend 
 Rules:
 - API routes MUST use `@/lib/authz/api` guards (never read cookies; read the Authorization header only).
 - Frontend MUST use `@/lib/authz/web` (no header parsing on the client).
-- Roles map to permissions via `getRolePermissions(systemRole)`; super admin (`*:*`) passes all checks.
+- Roles map to permissions via `getRolePermissions(systemRole)`; `super_admin` maps to `*:*`.
 
 Examples:
 ```ts
