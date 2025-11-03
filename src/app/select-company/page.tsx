@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Building2, Check, Loader2, LogOut } from "lucide-react";
-import { setActiveCompanyCookie, getTokenCookie } from "@/lib/cookies";
+import { setActiveCompanyCookie, getTokenCookie, setTokenCookie, setRefreshTokenCookie } from "@/lib/cookies";
 import { handleLogout } from "@/lib/auth";
 import { useAuth } from "@/lib/providers/auth-provider";
 
@@ -86,6 +86,16 @@ export default function SelectCompanyPage() {
 
       if (!response.ok) {
         throw new Error(result.error || "Failed to set active company");
+      }
+
+      // Store new tokens if returned
+      if (result.token) {
+        setTokenCookie(result.token, result.expiresIn);
+        // Dispatch event to notify AuthProvider of token change
+        window.dispatchEvent(new CustomEvent('auth:token-refreshed'));
+      }
+      if (result.refreshToken) {
+        setRefreshTokenCookie(result.refreshToken, result.expiresIn);
       }
 
       // Set cookie and update context, then redirect

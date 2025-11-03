@@ -5,6 +5,7 @@ import {
   useContext,
   useState,
   useEffect,
+  useRef,
   ReactNode,
   useCallback,
 } from "react";
@@ -149,6 +150,50 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   useEffect(() => {
     fetchUserData();
+  }, [fetchUserData]);
+
+  // Track last token to detect changes
+  const lastTokenRef = useRef<string | null>(null);
+
+  // Initialize token tracking
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      lastTokenRef.current = getTokenCookie();
+    }
+  }, []);
+
+  // Listen for token changes (e.g., after login)
+  useEffect(() => {
+    const handleTokenChange = () => {
+      fetchUserData();
+    };
+
+    // Listen for custom auth events
+    window.addEventListener('auth:token-set', handleTokenChange);
+    window.addEventListener('auth:token-refreshed', handleTokenChange);
+    window.addEventListener('auth:logout', handleTokenChange);
+
+    // Also poll for token changes (fallback for cases where events aren't dispatched)
+    // Using a longer interval to avoid excessive polling
+    const tokenCheckInterval = setInterval(() => {
+      const currentToken = getTokenCookie();
+      const previousToken = lastTokenRef.current;
+      
+      if (currentToken !== previousToken) {
+        lastTokenRef.current = currentToken;
+        if (currentToken || previousToken) {
+          // Token changed (set or removed)
+          fetchUserData();
+        }
+      }
+    }, 3000); // Check every 3 seconds
+
+    return () => {
+      window.removeEventListener('auth:token-set', handleTokenChange);
+      window.removeEventListener('auth:token-refreshed', handleTokenChange);
+      window.removeEventListener('auth:logout', handleTokenChange);
+      clearInterval(tokenCheckInterval);
+    };
   }, [fetchUserData]);
 
   const setActiveCompany = useCallback((companyId: string) => {

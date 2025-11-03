@@ -50,6 +50,8 @@ export default function LoginPage() {
       // Store token and refresh token client-side
       if (result.token) {
         setTokenCookie(result.token, result.expiresIn);
+        // Dispatch event to notify AuthProvider of token change
+        window.dispatchEvent(new CustomEvent('auth:token-set'));
       }
       if (result.refreshToken) {
         setRefreshTokenCookie(result.refreshToken, result.expiresIn);

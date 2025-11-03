@@ -17,8 +17,11 @@ export async function handleLogout(router: { push: (path: string) => void }): Pr
     // Clear all auth cookies
     clearAuthCookies();
     
-    // Also clear localStorage for backward compatibility
+    // Dispatch event to notify AuthProvider of logout
     if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('auth:logout'));
+      
+      // Also clear localStorage for backward compatibility
       localStorage.removeItem('token');
       localStorage.removeItem('refreshToken');
       localStorage.removeItem('tokenExpiresIn');
