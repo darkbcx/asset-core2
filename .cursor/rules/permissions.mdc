@@ -38,16 +38,16 @@ Throughout the documentation, “System Administrator(s)” refers to users with
 
 **Scope:** Full administrative access within company scope
 
-| Permission Category | Create | Read | Update | Delete | Special Actions                              |
-| ------------------- | ------ | ---- | ------ | ------ | -------------------------------------------- |
-| **Assets**          | ✅     | ✅   | ✅     | ✅     | Bulk import/export, Asset type configuration |
-| **Components**      | ✅     | ✅   | ✅     | ✅     | Component transfer management                |
-| **Maintenance**     | ✅     | ✅   | ✅     | ✅     | Schedule management, Technician assignment   |
-| **Users**           | ✅     | ✅   | ✅     | ✅     | Role assignment, Permission configuration    |
-| **Companies**       | ✅     | ✅   | ✅     | ❌     | Company settings, Subscription management    |
-| **Files**           | ✅     | ✅   | ✅     | ✅     | File management, Storage configuration       |
-| **Reports**         | ✅     | ✅   | ✅     | ✅     | Custom reports, Data export                  |
-| **System**          | ❌     | ❌   | ❌     | ❌     | No system-level access                       |
+| Permission Category | Create | Read | Update | Delete | Special Actions                                                                              |
+| ------------------- | ------ | ---- | ------ | ------ | -------------------------------------------------------------------------------------------- |
+| **Assets**          | ✅     | ✅   | ✅     | ✅     | Bulk import/export, Asset type configuration                                                 |
+| **Components**      | ✅     | ✅   | ✅     | ✅     | Component transfer management                                                                |
+| **Maintenance**     | ✅     | ✅   | ✅     | ✅     | Schedule management, Technician assignment                                                   |
+| **Users**           | ✅     | ✅   | ✅     | ✅     | Create users (auto-assigned), Assign existing users to active company, Active company scope only, Tenant users only |
+| **Companies**       | ✅     | ✅   | ✅     | ❌     | Company settings, Subscription management                                                    |
+| **Files**           | ✅     | ✅   | ✅     | ✅     | File management, Storage configuration                                                       |
+| **Reports**         | ✅     | ✅   | ✅     | ✅     | Custom reports, Data export                                                                  |
+| **System**          | ❌     | ❌   | ❌     | ❌     | No system-level access                                                                       |
 
 **Additional Permissions:**
 
@@ -56,6 +56,27 @@ Throughout the documentation, “System Administrator(s)” refers to users with
 - Access to all company data and analytics
 - User onboarding and training management
 - Integration with external company systems
+
+**User Management Restrictions:**
+
+- **Active Company Scope**: Company Administrators can only manage users assigned to their **active company** (the company context in their current session via `active_company_id` in JWT token)
+- **Multi-Company Administrators**: If a Company Administrator is assigned to multiple companies, they can only manage users from their currently active company, not from other companies they have access to
+- **Tenant Users Only**: Company Administrators can only manage tenant users (`user_type = 'tenant'`), not system administrators (`user_type = 'system_admin'`)
+- **Company Isolation**: Company Administrators cannot manage users from other companies, even if:
+  - The Company Administrator has access to multiple companies
+  - The target user has access to multiple companies
+  - The user belongs to a different company than the active one
+- **User Creation**: Company Administrators can create new users and the user is **automatically assigned** to the Company Administrator's active company with a user-company association
+- **User Assignment**: Company Administrators can assign existing users to their active company if the user is not already assigned to that company. This allows:
+  - Assigning users who are not yet assigned to any company
+  - Assigning users who are assigned to other companies (but not to the active company)
+  - Creating user-company associations with role assignment
+  - Cannot assign users who are already assigned to the active company (existing association)
+- **User Management**: Company Administrators can update roles and remove users from their active company, but cannot access user data from other companies
+- **Enforcement**: All user management operations must verify that:
+  - The target user is assigned to the Company Administrator's **active company** (via `user_companies` table)
+  - The target user is a tenant user (`user_type = 'tenant'`)
+  - The user-company association is active (`is_active = true`)
 
 ### Asset Manager
 
@@ -194,6 +215,7 @@ The AssetCore permission system uses a hierarchical `[entity]:[action]` format w
 **Basic Format:** `[entity]:[action]`
 
 **Examples:**
+
 - `assets:create` - Create assets
 - `assets:read` - Read assets
 - `assets:update` - Update assets
@@ -202,6 +224,7 @@ The AssetCore permission system uses a hierarchical `[entity]:[action]` format w
 - `users:manage` - Manage users
 
 **Wildcard Support:**
+
 - `*:*` - All permissions (Super Administrator)
 - `assets:*` - All asset-related permissions
 - `*:read` - Read access to all entities
@@ -209,20 +232,20 @@ The AssetCore permission system uses a hierarchical `[entity]:[action]` format w
 
 #### Permission Categories
 
-| Entity | Actions | Description |
-|--------|---------|-------------|
-| **assets** | create, read, update, delete, import, export | Asset management operations |
-| **components** | create, read, update, delete, transfer | Component operations |
-| **maintenance** | create, read, update, delete, assign, schedule | Maintenance workflow |
-| **users** | create, read, update, delete, manage, invite | User management |
-| **companies** | read, update, configure, billing | Company settings |
-| **files** | upload, download, delete, manage | File operations |
-| **reports** | generate, export, schedule | Report generation |
-| **system** | configure, monitor, backup, logs | System administration |
+| Entity          | Actions                                        | Description                 |
+| --------------- | ---------------------------------------------- | --------------------------- |
+| **assets**      | create, read, update, delete, import, export   | Asset management operations |
+| **components**  | create, read, update, delete, transfer         | Component operations        |
+| **maintenance** | create, read, update, delete, assign, schedule | Maintenance workflow        |
+| **users**       | create, read, update, delete, manage, invite   | User management             |
+| **companies**   | read, update, configure, billing               | Company settings            |
+| **files**       | upload, download, delete, manage               | File operations             |
+| **reports**     | generate, export, schedule                     | Report generation           |
+| **system**      | configure, monitor, backup, logs               | System administration       |
 
 ### Permission Computation
 
-The permissions are **not stored in the database** but are computed dynamically from user roles using `getRolePermissions(role)` from `@/lib/permissions.ts`. 
+The permissions are **not stored in the database** but are computed dynamically from user roles using `getRolePermissions(role)` from `@/lib/permissions.ts`.
 
 **For Tenant Users**: Permissions are computed from `role` in the `user_companies` table (company-specific).
 **For System Administrators**: Permissions are computed from `system_role` in the `users` table (platform-wide).
@@ -232,7 +255,7 @@ The computed permissions are returned as an array of permission strings:
 ```json
 [
   "assets:create",
-  "assets:read", 
+  "assets:read",
   "assets:update",
   "assets:delete",
   "components:create",
@@ -250,6 +273,7 @@ The computed permissions are returned as an array of permission strings:
 ```
 
 **Benefits of Dynamic Permission Computation**:
+
 - Permissions are always consistent with role definitions in code
 - Permission changes are immediately reflected without database migrations
 - Reduces database storage and eliminates permission data synchronization issues
@@ -258,15 +282,17 @@ The computed permissions are returned as an array of permission strings:
 #### Permission Hierarchy Examples
 
 **System Administrator:**
+
 ```json
 ["*:*"]
 ```
 
 **Company Administrators:**
+
 ```json
 [
   "assets:*",
-  "components:*", 
+  "components:*",
   "maintenance:*",
   "users:*",
   "companies:read",
@@ -278,10 +304,11 @@ The computed permissions are returned as an array of permission strings:
 ```
 
 **Asset Managers:**
+
 ```json
 [
   "assets:create",
-  "assets:read", 
+  "assets:read",
   "assets:update",
   "components:create",
   "components:read",
@@ -301,21 +328,18 @@ The computed permissions are returned as an array of permission strings:
 ```
 
 **Operations Supervisors:**
+
 ```json
-[
-  "*:read",
-  "maintenance:read",
-  "reports:generate",
-  "reports:export"
-]
+["*:read", "maintenance:read", "reports:generate", "reports:export"]
 ```
 
 **Maintenance Technicians:**
+
 ```json
 [
   "assets:read",
   "components:read",
-  "components:update", 
+  "components:update",
   "maintenance:create",
   "maintenance:read",
   "maintenance:update",
@@ -325,12 +349,9 @@ The computed permissions are returned as an array of permission strings:
 ```
 
 **Support Administrators:**
+
 ```json
-[
-  "*:read",
-  "users:update",
-  "system:monitor"
-]
+["*:read", "users:update", "system:monitor"]
 ```
 
 ### Permission Validation
@@ -339,66 +360,97 @@ The computed permissions are returned as an array of permission strings:
 
 ```typescript
 // Check if user has specific permission
-export function hasPermission(userPermissions: string[], requiredPermission: string): boolean {
+export function hasPermission(
+  userPermissions: string[],
+  requiredPermission: string
+): boolean {
   // Direct match
   if (userPermissions.includes(requiredPermission)) {
     return true;
   }
-  
+
   // Wildcard checks
-  const [entity, action] = requiredPermission.split(':');
-  
+  const [entity, action] = requiredPermission.split(":");
+
   // Check for entity wildcard (e.g., "assets:*")
   if (userPermissions.includes(`${entity}:*`)) {
     return true;
   }
-  
+
   // Check for action wildcard (e.g., "*:read")
   if (userPermissions.includes(`*:${action}`)) {
     return true;
   }
-  
+
   // Check for global wildcard (e.g., "*:*")
-  if (userPermissions.includes('*:*')) {
+  if (userPermissions.includes("*:*")) {
     return true;
   }
-  
+
   return false;
 }
 
 // Check multiple permissions (all must be satisfied)
-export function hasAllPermissions(userPermissions: string[], requiredPermissions: string[]): boolean {
-  return requiredPermissions.every(permission => hasPermission(userPermissions, permission));
+export function hasAllPermissions(
+  userPermissions: string[],
+  requiredPermissions: string[]
+): boolean {
+  return requiredPermissions.every((permission) =>
+    hasPermission(userPermissions, permission)
+  );
 }
 
 // Check multiple permissions (any must be satisfied)
-export function hasAnyPermission(userPermissions: string[], requiredPermissions: string[]): boolean {
-  return requiredPermissions.some(permission => hasPermission(userPermissions, permission));
+export function hasAnyPermission(
+  userPermissions: string[],
+  requiredPermissions: string[]
+): boolean {
+  return requiredPermissions.some((permission) =>
+    hasPermission(userPermissions, permission)
+  );
 }
 
 // Get user's permissions for a specific entity
-export function getEntityPermissions(userPermissions: string[], entity: string): string[] {
+export function getEntityPermissions(
+  userPermissions: string[],
+  entity: string
+): string[] {
   return userPermissions
-    .filter(permission => permission.startsWith(`${entity}:`) || permission === '*:*')
-    .map(permission => permission.split(':')[1])
-    .filter(action => action !== '*');
+    .filter(
+      (permission) =>
+        permission.startsWith(`${entity}:`) || permission === "*:*"
+    )
+    .map((permission) => permission.split(":")[1])
+    .filter((action) => action !== "*");
 }
 
 // System Administrator Role Checking Functions
-export function isSystemAdmin(userType: string, systemRole?: string | null): boolean {
-  return userType === 'system_admin';
+export function isSystemAdmin(
+  userType: string,
+  systemRole?: string | null
+): boolean {
+  return userType === "system_admin";
 }
 
-export function isSuperAdmin(userType: string, systemRole?: string | null): boolean {
-  return userType === 'system_admin' && systemRole === 'super_admin';
+export function isSuperAdmin(
+  userType: string,
+  systemRole?: string | null
+): boolean {
+  return userType === "system_admin" && systemRole === "super_admin";
 }
 
-export function isSupportAdmin(userType: string, systemRole?: string | null): boolean {
-  return userType === 'system_admin' && systemRole === 'support_admin';
+export function isSupportAdmin(
+  userType: string,
+  systemRole?: string | null
+): boolean {
+  return userType === "system_admin" && systemRole === "support_admin";
 }
 
-export function hasSystemRole(user: { user_type: string; system_role?: string | null }, role: 'super_admin' | 'support_admin'): boolean {
-  return user.user_type === 'system_admin' && user.system_role === role;
+export function hasSystemRole(
+  user: { user_type: string; system_role?: string | null },
+  role: "super_admin" | "support_admin"
+): boolean {
+  return user.user_type === "system_admin" && user.system_role === role;
 }
 ```
 
@@ -410,15 +462,15 @@ export function requirePermission(requiredPermission: string) {
   return async (req: Request, res: Response, next: NextFunction) => {
     const user = req.user;
     const userPermissions = user.permissions || [];
-    
+
     if (!hasPermission(userPermissions, requiredPermission)) {
-      return res.status(403).json({ 
-        error: 'Insufficient permissions',
+      return res.status(403).json({
+        error: "Insufficient permissions",
         required: requiredPermission,
-        user_permissions: userPermissions
+        user_permissions: userPermissions,
       });
     }
-    
+
     next();
   };
 }
@@ -428,15 +480,15 @@ export function requireAnyPermission(requiredPermissions: string[]) {
   return async (req: Request, res: Response, next: NextFunction) => {
     const user = req.user;
     const userPermissions = user.permissions || [];
-    
+
     if (!hasAnyPermission(userPermissions, requiredPermissions)) {
-      return res.status(403).json({ 
-        error: 'Insufficient permissions',
+      return res.status(403).json({
+        error: "Insufficient permissions",
         required: requiredPermissions,
-        user_permissions: userPermissions
+        user_permissions: userPermissions,
       });
     }
-    
+
     next();
   };
 }
@@ -446,15 +498,15 @@ export function requireAllPermissions(requiredPermissions: string[]) {
   return async (req: Request, res: Response, next: NextFunction) => {
     const user = req.user;
     const userPermissions = user.permissions || [];
-    
+
     if (!hasAllPermissions(userPermissions, requiredPermissions)) {
-      return res.status(403).json({ 
-        error: 'Insufficient permissions',
+      return res.status(403).json({
+        error: "Insufficient permissions",
         required: requiredPermissions,
-        user_permissions: userPermissions
+        user_permissions: userPermissions,
       });
     }
-    
+
     next();
   };
 }
@@ -464,32 +516,50 @@ export function requireAllPermissions(requiredPermissions: string[]) {
 
 ```typescript
 // API route protection examples
-app.get('/api/assets', requirePermission('assets:read'), getAssets);
-app.post('/api/assets', requirePermission('assets:create'), createAsset);
-app.put('/api/assets/:id', requirePermission('assets:update'), updateAsset);
-app.delete('/api/assets/:id', requirePermission('assets:delete'), deleteAsset);
+app.get("/api/assets", requirePermission("assets:read"), getAssets);
+app.post("/api/assets", requirePermission("assets:create"), createAsset);
+app.put("/api/assets/:id", requirePermission("assets:update"), updateAsset);
+app.delete("/api/assets/:id", requirePermission("assets:delete"), deleteAsset);
 
 // Multiple permission requirements
-app.get('/api/reports', requireAnyPermission(['reports:generate', 'reports:export']), getReports);
-app.post('/api/maintenance', requireAllPermissions(['maintenance:create', 'maintenance:assign']), createMaintenance);
+app.get(
+  "/api/reports",
+  requireAnyPermission(["reports:generate", "reports:export"]),
+  getReports
+);
+app.post(
+  "/api/maintenance",
+  requireAllPermissions(["maintenance:create", "maintenance:assign"]),
+  createMaintenance
+);
 
 // Dynamic permission checking
-export function checkAssetAccess(userId: string, assetId: string, action: string): boolean {
+export function checkAssetAccess(
+  userId: string,
+  assetId: string,
+  action: string
+): boolean {
   const user = getUserById(userId);
   const requiredPermission = `assets:${action}`;
   return hasPermission(user.permissions, requiredPermission);
 }
 
 // System administrator access control
-export function requireSuperAdmin(user: { user_type: string; system_role?: string | null }) {
+export function requireSuperAdmin(user: {
+  user_type: string;
+  system_role?: string | null;
+}) {
   if (!isSuperAdmin(user.user_type, user.system_role)) {
-    throw new Error('Super Administrator access required');
+    throw new Error("Super Administrator access required");
   }
 }
 
-export function requireSupportAdminOrHigher(user: { user_type: string; system_role?: string | null }) {
+export function requireSupportAdminOrHigher(user: {
+  user_type: string;
+  system_role?: string | null;
+}) {
   if (!isSystemAdmin(user.user_type, user.system_role)) {
-    throw new Error('System Administrator access required');
+    throw new Error("System Administrator access required");
   }
 }
 ```
@@ -516,9 +586,10 @@ export function enforceMultiCompanyAccess(
   // Tenant users must have access to the requested company
   if (user.user_type === "tenant") {
     const hasAccess = user.companies?.some(
-      (company) => company.company_id === requestedCompanyId && company.is_active
+      (company) =>
+        company.company_id === requestedCompanyId && company.is_active
     );
-    
+
     if (hasAccess) {
       req.companyId = requestedCompanyId;
       req.userRole = user.companies.find(
@@ -543,7 +614,7 @@ export function getUserCompanies(userId: string): Promise<CompanyAccess[]> {
     WHERE uc.user_id = ? AND uc.is_active = true AND c.is_active = true
     ORDER BY uc.is_primary DESC, uc.joined_at ASC
   `;
-  
+
   return db.execute(query, [userId]);
 }
 ```

@@ -381,6 +381,256 @@ const [rows] = await connection.query(query, [id]); // Use execute() instead
 - **Audit Logging**: Comprehensive logging of all API access
 - **Resource Validation**: Verify resource ownership before operations
 
+#### Company Administrator User Management Restrictions
+
+**Company Administrators can only manage users assigned to their active company.**
+
+**Enforcement Rules:**
+
+1. **Active Company Scope**: Company Administrators can only manage users that have an active association with their **active company** (the company context in their current session via `active_company_id` in JWT token)
+2. **Multi-Company Administrators**: If a Company Administrator is assigned to multiple companies, they can only manage users from their currently active company. They must switch to another company context (via `/api/auth/set-active-company`) to manage users in that company
+3. **User Creation**: Company Administrators can create new users and the user is **automatically assigned** to the Company Administrator's active company. The newly created user will have:
+   - `user_type = 'tenant'` (cannot create system administrators)
+   - An automatic user-company association created linking them to the active company
+   - A role assigned by the Company Administrator (defaults to a role specified during creation)
+4. **User Assignment**: Company Administrators can assign existing users to their active company if:
+   - The user is not already assigned to the active company (check `user_companies` table)
+   - The user is a tenant user (`user_type = 'tenant'`), not a system administrator
+   - The user may be assigned to other companies or no companies yet
+   - Creates a new user-company association with the specified role
+5. **Tenant Users Only**: Company Administrators can only manage tenant users (`user_type = 'tenant'`), not system administrators (`user_type = 'system_admin'`)
+6. **Company Isolation**: Company Administrators cannot manage users from other companies, even if:
+   - The Company Administrator has access to multiple companies
+   - The target user has access to multiple companies
+   - The user belongs to a different company than the active one
+   - **Exception**: Can assign existing users from other companies to their active company (creates new association)
+7. **Verification Required**: All user management operations must verify that:
+   - The target user is assigned to the Company Administrator's **active company** (via `user_companies` table using `active_company_id` from JWT)
+   - The target user is a tenant user (`user_type = 'tenant'`)
+   - The user-company association is active (`is_active = true`)
+
+**Implementation Pattern:**
+
+```typescript
+// ✅ CORRECT: Company Administrator user management with validation
+import { NextRequest, NextResponse } from 'next/server';
+import { extractTokenFromHeader, createAuthContext } from '@/backend/authentication';
+import { getUsersByCompany, updateUser, createUser, getUserById } from '@/backend/user';
+import { userHasCompanyAccess, createUserCompany } from '@/backend/user';
+
+export async function GET(request: NextRequest) {
+  // Extract and validate authentication
+  const authHeader = request.headers.get('authorization');
+  const token = extractTokenFromHeader(authHeader);
+  if (!token) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const ctx = await createAuthContext(token);
+  if (!ctx.success || !ctx.result) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const user = ctx.result.user;
+  const companyId = ctx.result.active_company_id;
+
+  // Verify user is a Company Administrator with users:* permissions
+  // (permission check logic here)
+
+  // Only return users assigned to the Company Administrator's company
+  const users = await getUsersByCompany(companyId);
+  return NextResponse.json({ data: users });
+}
+
+export async function POST(request: NextRequest) {
+  // Extract and validate authentication
+  const authHeader = request.headers.get('authorization');
+  const token = extractTokenFromHeader(authHeader);
+  if (!token) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const ctx = await createAuthContext(token);
+  if (!ctx.success || !ctx.result) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const user = ctx.result.user;
+  const companyId = ctx.result.active_company_id;
+
+  // Verify user is a Company Administrator with users:create permissions
+  // (permission check logic here)
+
+  const body = await request.json();
+  
+  // Create user with user_type = 'tenant'
+  // This ensures Company Administrators cannot create system administrators
+  const userData = {
+    ...body,
+    user_type: 'tenant', // Force tenant user type
+    system_role: null,   // Tenant users have no system_role
+  };
+
+  const newUser = await createUser(userData, body.password_hash);
+  
+  // Automatically create user-company association for active company
+  const userCompanyData = {
+    user_id: newUser.id,
+    company_id: companyId, // Use active company from JWT
+    role: body.role || 'maintenance_technician', // Default role if not specified
+    is_active: true,
+    is_primary: true, // Make this the primary company for the new user
+  };
+
+  await createUserCompany(userCompanyData);
+
+  return NextResponse.json({ data: newUser }, { status: 201 });
+}
+
+export async function POST(request: NextRequest, { params }: { params: { userId: string } }) {
+  // Assign existing user to active company
+  // Extract and validate authentication
+  const authHeader = request.headers.get('authorization');
+  const token = extractTokenFromHeader(authHeader);
+  if (!token) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const ctx = await createAuthContext(token);
+  if (!ctx.success || !ctx.result) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const user = ctx.result.user;
+  const companyId = ctx.result.active_company_id;
+  const targetUserId = params.userId;
+
+  // Verify user is a Company Administrator with users:create permissions
+  // (permission check logic here)
+
+  // Verify target user exists and is a tenant user
+  const targetUserResult = await getUserById(targetUserId);
+  if (!targetUserResult.success || !targetUserResult.result) {
+    return NextResponse.json({ error: 'User not found' }, { status: 404 });
+  }
+
+  if (targetUserResult.result.user_type !== 'tenant') {
+    return NextResponse.json(
+      { error: 'Cannot assign system administrators' },
+      { status: 403 }
+    );
+  }
+
+  // Check if user is already assigned to this company
+  const alreadyAssigned = await userHasCompanyAccess(targetUserId, companyId);
+  if (alreadyAssigned) {
+    return NextResponse.json(
+      { error: 'User is already assigned to this company' },
+      { status: 409 }
+    );
+  }
+
+  const body = await request.json();
+  
+  // Create user-company association
+  const userCompanyData = {
+    user_id: targetUserId,
+    company_id: companyId,
+    role: body.role || 'maintenance_technician', // Default role if not specified
+    is_active: true,
+    is_primary: false, // Don't automatically set as primary (may have other companies)
+  };
+
+  const userCompany = await createUserCompany(userCompanyData);
+
+  return NextResponse.json({ data: userCompany }, { status: 201 });
+}
+
+export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+  // Extract and validate authentication
+  const authHeader = request.headers.get('authorization');
+  const token = extractTokenFromHeader(authHeader);
+  if (!token) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const ctx = await createAuthContext(token);
+  if (!ctx.success || !ctx.result) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const user = ctx.result.user;
+  const companyId = ctx.result.active_company_id;
+  const targetUserId = params.id;
+
+  // Verify target user is assigned to the Company Administrator's company
+  const hasAccess = await userHasCompanyAccess(targetUserId, companyId);
+  if (!hasAccess) {
+    return NextResponse.json(
+      { error: 'User not found or access denied' },
+      { status: 403 }
+    );
+  }
+
+  // Verify target user is a tenant user (not a system administrator)
+  const targetUser = await getUserById(targetUserId);
+  if (!targetUser.success || !targetUser.result) {
+    return NextResponse.json({ error: 'User not found' }, { status: 404 });
+  }
+
+  if (targetUser.result.user_type !== 'tenant') {
+    return NextResponse.json(
+      { error: 'Cannot manage system administrators' },
+      { status: 403 }
+    );
+  }
+
+  // Proceed with update operation
+  const body = await request.json();
+  const result = await updateUser(targetUserId, body);
+  
+  if (!result.success) {
+    return NextResponse.json({ error: result.error }, { status: 400 });
+  }
+
+  return NextResponse.json({ data: result.result });
+}
+```
+
+**Error Responses:**
+
+- **403 Forbidden**: Returned when Company Administrator tries to manage:
+  - Users not assigned to their **active company** (even if assigned to other companies they have access to)
+  - System administrators (`user_type = 'system_admin'`)
+  - Users from companies other than their currently active company
+- **409 Conflict**: Returned when Company Administrator tries to assign a user who is already assigned to their active company
+
+**Backend Function Requirements:**
+
+All user management backend functions should:
+- Accept `companyId` parameter for company-scoped queries
+- Verify user-company association before operations
+- Filter out system administrators from company-scoped user lists
+- Use `getUsersByCompany(companyId)` for company-scoped user queries
+
+**User Creation Requirements:**
+
+When Company Administrators create users, the backend functions should:
+- Automatically create the user with `user_type = 'tenant'` (never allow `user_type = 'system_admin'`)
+- Automatically create a user-company association linking the new user to the Company Administrator's active company
+- Set the created association as `is_active = true` and optionally `is_primary = true`
+- Assign the role specified by the Company Administrator (or use a default role if not specified)
+
+**User Assignment Requirements:**
+
+When Company Administrators assign existing users to their active company, the backend functions should:
+- Verify the user is not already assigned to the active company (check `user_companies` table)
+- Verify the user is a tenant user (`user_type = 'tenant'`), not a system administrator
+- Create a new user-company association linking the user to the Company Administrator's active company
+- Set the created association as `is_active = true` and `is_primary = false` (user may have other companies)
+- Assign the role specified by the Company Administrator (or use a default role if not specified)
+- Return 409 Conflict if the user is already assigned to the active company
+
 ### Performance & Monitoring
 - **Response Time Monitoring**: Track API response times
 - **Error Rate Tracking**: Monitor and alert on error rates

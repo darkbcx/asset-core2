@@ -40,12 +40,19 @@ export const SUPPORT_ADMIN_PERMISSIONS = [
 /**
  * Company Administrator Permissions
  * Full administrative access within company scope
+ * 
+ * Note: While Company Administrators have 'users:*' permissions, the following
+ * restrictions are enforced at the application/API level:
+ * - Can only manage users assigned to their active company (active_company_id from JWT)
+ * - Can only manage tenant users (user_type = 'tenant'), not system administrators
+ * - New users are automatically assigned to the Company Administrator's active company
+ * - For multi-company administrators, user management is scoped to the currently active company only
  */
 export const COMPANY_ADMIN_PERMISSIONS = [
   'assets:*',
   'components:*', 
   'maintenance:*',
-  'users:*',
+  'users:*', // Full user management within active company scope (enforced at API level)
   'companies:read',
   'companies:update',
   'companies:configure',
