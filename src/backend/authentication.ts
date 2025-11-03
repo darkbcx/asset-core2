@@ -13,7 +13,6 @@
 
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import { v4 as uuidv4 } from "uuid";
 import { db } from "@/lib/db";
 import { loginSchema, createUserSchema } from "@/lib/validators/user";
 import type {
@@ -27,6 +26,7 @@ import {
   getUserById,
   getUserWithCompanies,
   updateLastLogin,
+  createUser,
 } from "@/backend/user";
 import type { BackendResponse } from "@/backend/types";
 
@@ -291,59 +291,15 @@ export async function register(userData: CreateUser): Promise<User> {
 
   // Check if email already exists
   const existingUser = await getUserByEmail(validatedData.email);
-
-  if (existingUser) {
+  if (existingUser.success && existingUser.result) {
     throw new Error("Email already registered");
   }
 
   // Hash password
   const passwordHash = await hashPassword(validatedData.password);
 
-  // Create user
-  const userId = uuidv4();
-  const now = new Date();
-
-  const user: User = {
-    id: userId,
-    user_type: validatedData.user_type,
-    system_role: validatedData.system_role || null,
-    email: validatedData.email,
-    first_name: validatedData.first_name,
-    last_name: validatedData.last_name || undefined,
-    is_active: true,
-    last_login: null,
-    password_hash: passwordHash,
-    system_permissions: validatedData.system_permissions || null,
-    created_at: now,
-    updated_at: now,
-  };
-
-  // Insert user into database
-  const query = `
-    INSERT INTO users (
-      id, user_type, system_role, system_permissions, email,
-      first_name, last_name, is_active, last_login, password_hash,
-      created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `;
-
-  const params = [
-    user.id,
-    user.user_type,
-    user.system_role,
-    user.system_permissions ? JSON.stringify(user.system_permissions) : null,
-    user.email,
-    user.first_name,
-    user.last_name || null,
-    user.is_active,
-    user.last_login,
-    user.password_hash,
-    user.created_at,
-    user.updated_at,
-  ];
-
-  await db.execute(query, params);
-
+  // Delegate persistence to user repository
+  const user = await createUser(validatedData, passwordHash);
   return user;
 }
 

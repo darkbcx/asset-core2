@@ -421,6 +421,117 @@ export async function getAllUsers(filters?: {
 }
 
 /**
+ * List users with cursor-based pagination (system-wide)
+ *
+ * Follows standard pagination shape:
+ * - result: { users, pagination: { cursor, limit, has_more, total_count } }
+ * - Sorted by created_at DESC, id DESC for stable pagination
+ *
+ * @param params - Pagination and filter params
+ */
+export async function listUsersPaginated(params?: {
+  limit?: number;
+  cursor?: string | null; // base64-encoded JSON: { createdAt: string, id: string }
+  userType?: "tenant" | "system_admin";
+  isActive?: boolean;
+}): Promise<BackendResponse<{
+  users: User[];
+  pagination: {
+    cursor: string | null;
+    limit: number;
+    has_more: boolean;
+    total_count: number;
+  };
+}>> {
+  try {
+    const limit = Math.min(Math.max(params?.limit ?? 50, 1), 100);
+
+    // Build filters
+    const whereClauses: string[] = ["1=1"]; // start with neutral clause
+    const whereParams: unknown[] = [];
+
+    if (params?.userType) {
+      whereClauses.push("user_type = ?");
+      whereParams.push(params.userType);
+    }
+
+    if (params?.isActive !== undefined) {
+      whereClauses.push("is_active = ?");
+      whereParams.push(params.isActive);
+    }
+
+    // Cursor decoding
+    let cursorCreatedAt: string | null = null;
+    let cursorId: string | null = null;
+    if (params?.cursor) {
+      try {
+        const decoded = Buffer.from(params.cursor, "base64").toString("utf8");
+        const parsed = JSON.parse(decoded) as { createdAt: string; id: string };
+        cursorCreatedAt = parsed.createdAt;
+        cursorId = parsed.id;
+      } catch {
+        // Ignore bad cursor and treat as first page
+      }
+    }
+
+    if (cursorCreatedAt && cursorId) {
+      // For DESC order, use tuple comparison: items with earlier created_at, or same created_at but smaller id
+      whereClauses.push("(created_at < ? OR (created_at = ? AND id < ?))");
+      whereParams.push(new Date(cursorCreatedAt), new Date(cursorCreatedAt), cursorId);
+    }
+
+    // Total count (without cursor limitation for accurate has_more signal)
+    const countQuery = `
+      SELECT COUNT(*) as count
+      FROM users
+      WHERE ${whereClauses.join(" AND ")}
+    `;
+    const [countRows] = await db.execute<{ count: number }>(countQuery, whereParams);
+    const totalCount = countRows?.[0]?.count ?? 0;
+
+    // Page query with limit+1 fetch to determine has_more
+    const pageQuery = `
+      SELECT *
+      FROM users
+      WHERE ${whereClauses.join(" AND ")}
+      ORDER BY created_at DESC, id DESC
+      LIMIT ?
+    `;
+    const [rows] = await db.execute<User>(pageQuery, [...whereParams, limit + 1]);
+
+    const hasMore = rows.length > limit;
+    const users = hasMore ? rows.slice(0, limit) : rows;
+
+    // Next cursor from last item of current page
+    let nextCursor: string | null = null;
+    if (hasMore) {
+      const last = users[users.length - 1];
+      nextCursor = Buffer.from(
+        JSON.stringify({ createdAt: new Date(last.created_at as unknown as Date).toISOString?.() || (last.created_at as unknown as Date).toISOString?.() || new Date(last.created_at as unknown as string).toISOString(), id: last.id })
+      ).toString("base64");
+    }
+
+    return {
+      success: true,
+      result: {
+        users,
+        pagination: {
+          cursor: nextCursor,
+          limit,
+          has_more: hasMore,
+          total_count: totalCount,
+        },
+      },
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to list users",
+    };
+  }
+}
+
+/**
  * Get active users count by company
  *
  * @param companyId - Company ID

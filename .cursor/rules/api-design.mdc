@@ -29,6 +29,39 @@ AssetCore follows RESTful API design principles to provide a consistent, scalabl
 - **Multi-tenancy**: Company-scoped data access enforcement
 - **Stateless Design**: API routes do not read or write cookies; tokens managed client-side
 
+### Layer Separation & Controller Rules
+
+**API routes MUST NOT access the database directly. Always delegate to backend repository/service functions.**
+
+- **Thin Controllers**: API handlers focus only on HTTP concerns (validation, serialization, status codes)
+- **No DB in Routes**: Never import `db` in `app/api/.../route.ts`
+- **Delegate to Backend**: Call functions in `src/backend/*.ts` for all data access and business logic
+- **Stateless Auth**: Read tokens from `Authorization: Bearer <token>` header; do not read/write cookies in API routes
+
+```ts
+// ✅ CORRECT: API route delegates to backend repository
+import { NextRequest, NextResponse } from 'next/server';
+import { listUsersPaginated } from '@/backend/user';
+
+export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const limit = Number(searchParams.get('limit') || 50);
+  const cursor = searchParams.get('cursor');
+  const result = await listUsersPaginated({ limit, cursor: cursor || undefined });
+  if (!result.success || !result.result) {
+    return NextResponse.json({ error: result.error }, { status: 500 });
+  }
+  return NextResponse.json({ data: result.result.users, pagination: result.result.pagination });
+}
+
+// ❌ WRONG: Direct database access in API route
+import { db } from '@/lib/db';
+export async function GET() {
+  const [rows] = await db.execute('SELECT * FROM users'); // ❌ Don't do this
+  return NextResponse.json(rows);
+}
+```
+
 ### Request/Response Standards
 
 #### Request Headers
