@@ -70,7 +70,6 @@ async function seed(): Promise<void> {
         id: string;
         userType: string;
         systemRole: string | null;
-        systemPermissions: string | null;
         email: string;
         firstName: string;
         lastName: string;
@@ -82,7 +81,6 @@ async function seed(): Promise<void> {
           id: uuidv4(),
           userType: "system_admin",
           systemRole: "super_admin",
-          systemPermissions: '{"permissions": ["*:*"]}',
           email: "admin@assetcore.com",
           firstName: "System",
           lastName: "Administrator",
@@ -92,7 +90,6 @@ async function seed(): Promise<void> {
           id: uuidv4(),
           userType: "tenant",
           systemRole: null,
-          systemPermissions: null,
           email: "john.doe@acme.com",
           firstName: "John",
           lastName: "Doe",
@@ -102,7 +99,6 @@ async function seed(): Promise<void> {
           id: uuidv4(),
           userType: "tenant",
           systemRole: null,
-          systemPermissions: null,
           email: "jane.smith@acme.com",
           firstName: "Jane",
           lastName: "Smith",
@@ -112,7 +108,6 @@ async function seed(): Promise<void> {
           id: uuidv4(),
           userType: "tenant",
           systemRole: null,
-          systemPermissions: null,
           email: "mike.johnson@acme.com",
           firstName: "Mike",
           lastName: "Johnson",
@@ -122,7 +117,6 @@ async function seed(): Promise<void> {
           id: uuidv4(),
           userType: "tenant",
           systemRole: null,
-          systemPermissions: null,
           email: "sarah.lee@globallogistics.com",
           firstName: "Sarah",
           lastName: "Lee",
@@ -160,7 +154,6 @@ async function seed(): Promise<void> {
         userId: string;
         companyId: string;
         role: string;
-        permissions: string;
         isPrimary: boolean;
       }
 
@@ -170,7 +163,6 @@ async function seed(): Promise<void> {
           userId: users[1].id, // John Doe
           companyId: companies[0].id, // Acme
           role: "company_admin",
-          permissions: '{"assets": {"*": true}, "users": {"*": true}}',
           isPrimary: true,
         },
         {
@@ -178,7 +170,6 @@ async function seed(): Promise<void> {
           userId: users[2].id, // Jane Smith
           companyId: companies[0].id, // Acme
           role: "asset_manager",
-          permissions: '{"assets": {"*": true}, "maintenance": {"*": true}}',
           isPrimary: false,
         },
         {
@@ -186,7 +177,6 @@ async function seed(): Promise<void> {
           userId: users[3].id, // Mike Johnson
           companyId: companies[0].id, // Acme
           role: "maintenance_technician",
-          permissions: '{"maintenance": {"*": true}, "assets": {"read": true}}',
           isPrimary: false,
         },
         {
@@ -194,7 +184,6 @@ async function seed(): Promise<void> {
           userId: users[4].id, // Sarah Lee
           companyId: companies[1].id, // Global Logistics
           role: "company_admin",
-          permissions: '{"assets": {"*": true}, "users": {"*": true}}',
           isPrimary: true,
         },
       ];
@@ -388,12 +377,11 @@ async function seed(): Promise<void> {
       console.log("👤 Creating users...");
       for (const user of users) {
         await connection.execute(
-          `INSERT INTO users (id, user_type, system_role, system_permissions, email, first_name, last_name, password_hash, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, TRUE)`,
+          `INSERT INTO users (id, user_type, system_role, email, first_name, last_name, password_hash, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, TRUE)`,
           [
             user.id,
             user.userType,
             user.systemRole,
-            user.systemPermissions,
             user.email,
             user.firstName,
             user.lastName,
@@ -415,13 +403,12 @@ async function seed(): Promise<void> {
       console.log("🔐 Assigning user roles...");
       for (const userCompany of userCompanies) {
         await connection.execute(
-          `INSERT INTO user_companies (id, user_id, company_id, role, permissions, is_primary) VALUES (?, ?, ?, ?, ?, ?)`,
+          `INSERT INTO user_companies (id, user_id, company_id, role, is_primary) VALUES (?, ?, ?, ?, ?)`,
           [
             userCompany.id,
             userCompany.userId,
             userCompany.companyId,
             userCompany.role,
-            userCompany.permissions,
             userCompany.isPrimary,
           ]
         );

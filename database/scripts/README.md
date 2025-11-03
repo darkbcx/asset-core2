@@ -78,10 +78,9 @@ Example:
 
 The number prefix determines execution order.
 
-## Seed Files
+## Seed Implementation
 
-Seed files contain INSERT statements for sample data. Currently:
-- `001_initial_data.sql`
+Seeding is handled programmatically by the TypeScript `seed.ts` script, which generates all sample data using INSERT statements. There are no separate SQL seed files.
 
 ## Error Handling
 

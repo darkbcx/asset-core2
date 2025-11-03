@@ -53,7 +53,6 @@ AssetCore implements a comprehensive database schema designed for multi-tenant a
 | `id`                 | CHAR(36)     | Primary key                                                          | NOT NULL, UNIQUE |
 | `user_type`          | VARCHAR(20)  | User type: 'tenant' or 'system_admin'                                | NOT NULL         |
 | `system_role`        | VARCHAR(50)  | System role (only for system_admin)                                  | NULLABLE         |
-| `system_permissions` | JSON         | System administrator permissions (array of strings: "entity:action") | NULLABLE         |
 | `email`              | VARCHAR(255) | User email address                                                   | NOT NULL, UNIQUE |
 | `first_name`         | VARCHAR(100) | User's first name                                                    | NOT NULL         |
 | `last_name`          | VARCHAR(100) | User's last name                                                     | NULLABLE         |
@@ -67,7 +66,7 @@ AssetCore implements a comprehensive database schema designed for multi-tenant a
 
 - **Dual User Types**: Supports both tenant users and system administrators
 - **System Roles**: For system administrators, the `system_role` field distinguishes between 'Super Administrator' and 'Support Administrator'
-- **System Permissions**: The `system_permissions` field stores granular permissions for system administrators (stored as JSON array of strings: "entity:action")
+- **Role-Based Permissions**: Permissions are computed dynamically from `system_role` using `getRolePermissions()` from `@/lib/permissions.ts` (not stored in database)
 - **Multi-Company Support**: Users can be associated with multiple companies via UserCompany
 - **Security Features**: Password hashing and login tracking
 - **Soft Delete**: Account deactivation with is_active flag
@@ -95,7 +94,7 @@ System administrators are identified by `user_type = 'system_admin'` and differe
 
 ### UserCompany
 
-**Purpose:** Many-to-many relationship between users and companies, storing role and permissions for each company association.
+**Purpose:** Many-to-many relationship between users and companies, storing role for each company association. Permissions are computed dynamically from role using `getRolePermissions()` from `@/lib/permissions.ts`.
 
 | Field         | Type        | Description                                                      | Constraints      |
 | ------------- | ----------- | ---------------------------------------------------------------- | ---------------- |
@@ -103,7 +102,6 @@ System administrators are identified by `user_type = 'system_admin'` and differe
 | `user_id`     | CHAR(36)    | Foreign key to User                                              | NOT NULL, FK     |
 | `company_id`  | CHAR(36)    | Foreign key to Company                                           | NOT NULL, FK     |
 | `role`        | VARCHAR(50) | User role within this company                                    | NOT NULL         |
-| `permissions` | JSON        | Company-specific permissions (array of strings: "entity:action") | DEFAULT '[]'     |
 | `is_active`   | BOOLEAN     | Association status                                               | DEFAULT true     |
 | `is_primary`  | BOOLEAN     | Primary company for user                                         | DEFAULT false    |
 | `joined_at`   | TIMESTAMP   | When user joined this company                                    | NOT NULL         |
@@ -114,7 +112,7 @@ System administrators are identified by `user_type = 'system_admin'` and differe
 
 - **Multi-Company Access**: Users can be associated with multiple companies
 - **Company-Specific Roles**: Different roles for each company association
-- **Granular Permissions**: Company-specific permission configuration
+- **Role-Based Permissions**: Permissions are computed dynamically from `role` using `getRolePermissions()` from `@/lib/permissions.ts` (not stored in database)
 - **Primary Company**: Designates user's primary organization
 - **Association Management**: Track when users join/leave companies
 - **Soft Delete**: Deactivate associations without losing history
@@ -124,10 +122,10 @@ System administrators are identified by `user_type = 'system_admin'` and differe
 - Each user can have only one primary company (`is_primary = true`)
 - System administrators (user_type = 'system_admin') have no UserCompany records
 - System administrators must have a `system_role` field value ('super_admin' or 'support_admin')
-- System administrators store permissions in the User table's `system_permissions` field
-- Tenant users (user_type = 'tenant') must have `system_role = NULL` and `system_permissions = NULL` in User table
+- System administrator permissions are computed dynamically from `system_role` using `getRolePermissions()` from `@/lib/permissions.ts` (not stored in database)
+- Tenant users (user_type = 'tenant') must have `system_role = NULL` in User table
 - Tenant users (user_type = 'tenant') must have at least one UserCompany record
-- Tenant users store permissions in the UserCompany table's `permissions` field
+- Tenant user permissions are computed dynamically from `role` in UserCompany using `getRolePermissions()` from `@/lib/permissions.ts` (not stored in database)
 - Users can have different roles and permissions in different companies
 
 ## User Role Hierarchy & Permissions
@@ -188,12 +186,12 @@ The AssetCore system implements a comprehensive role-based access control system
 
 ### Permission System
 
-The system uses two different storage mechanisms for permissions:
+The system computes permissions dynamically from user roles using `getRolePermissions()` from `@/lib/permissions.ts`. Permissions are not stored in the database but are computed based on:
 
-**Tenant Users** - Permissions stored in `UserCompany.permissions` field (company-specific)
-**System Administrator** - Permissions stored in `User.system_permissions` field (platform-wide)
+**Tenant Users** - Permissions computed from `role` in `UserCompany` table (company-specific)
+**System Administrator** - Permissions computed from `system_role` in `User` table (platform-wide)
 
-Both use the same JSON format for granular permission configuration: an array of permission strings in the `[entity]:[action]` format (with wildcard support):
+Both use the same format for granular permission configuration: an array of permission strings in the `[entity]:[action]` format (with wildcard support):
 
 ```json
 [
@@ -210,12 +208,14 @@ Both use the same JSON format for granular permission configuration: an array of
 ]
 ```
 
-**For System Administrator**, permissions in the `User.system_permissions` field control:
+**For System Administrator**, permissions computed from `system_role` control:
 
 - Access to all tenant data across the platform
 - System configuration and settings management
 - Multi-tenant operations and oversight
 - Platform-wide user management
+
+**Implementation**: Permissions are computed at runtime using `getRolePermissions(role)` from `@/lib/permissions.ts` when needed (e.g., during authentication, authorization checks, or API requests). This ensures that permission changes in the code are immediately reflected without database updates.
 
 ### Security Considerations
 

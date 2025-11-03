@@ -8,8 +8,6 @@ AssetCore database migrations and seed data.
 database/
 ├── migrations/              # SQL schema migrations
 │   └── 001_initial_schema.sql
-├── seeds/                   # Sample data for development
-│   └── 001_initial_data.sql
 └── scripts/                 # TypeScript utility scripts
     ├── migrate.ts          # Run migrations
     ├── seed.ts             # Seed sample data
@@ -50,7 +48,7 @@ This will automatically create the database if it doesn't exist and run all pend
 yarn seed
 ```
 
-This will automatically create the database if it doesn't exist and execute all seed files.
+This will automatically create the database if it doesn't exist and populate it with sample data using the TypeScript seed script.
 
 ## Available Commands
 

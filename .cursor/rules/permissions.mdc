@@ -220,9 +220,14 @@ The AssetCore permission system uses a hierarchical `[entity]:[action]` format w
 | **reports** | generate, export, schedule | Report generation |
 | **system** | configure, monitor, backup, logs | System administration |
 
-### Database Schema
+### Permission Computation
 
-The permissions are stored in the `user_companies.permissions` JSON field as an array of permission strings:
+The permissions are **not stored in the database** but are computed dynamically from user roles using `getRolePermissions(role)` from `@/lib/permissions.ts`. 
+
+**For Tenant Users**: Permissions are computed from `role` in the `user_companies` table (company-specific).
+**For System Administrators**: Permissions are computed from `system_role` in the `users` table (platform-wide).
+
+The computed permissions are returned as an array of permission strings:
 
 ```json
 [
@@ -243,6 +248,12 @@ The permissions are stored in the `user_companies.permissions` JSON field as an 
   "reports:generate"
 ]
 ```
+
+**Benefits of Dynamic Permission Computation**:
+- Permissions are always consistent with role definitions in code
+- Permission changes are immediately reflected without database migrations
+- Reduces database storage and eliminates permission data synchronization issues
+- Single source of truth for permissions in `@/lib/permissions.ts`
 
 #### Permission Hierarchy Examples
 

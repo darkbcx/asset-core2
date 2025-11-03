@@ -28,6 +28,7 @@ import {
   updateLastLogin,
   createUser,
 } from "@/backend/user";
+import { getRolePermissions } from "@/lib/permissions";
 import type { BackendResponse } from "@/backend/types";
 
 // ==========================================
@@ -298,7 +299,7 @@ export async function login(
     let companies: Record<string, unknown>[] = [];
     if (user.user_type === "tenant") {
       const [companyRows] = await db.execute(
-        `SELECT uc.company_id, uc.role, uc.permissions, uc.is_primary, uc.is_active,
+        `SELECT uc.company_id, uc.role, uc.is_primary, uc.is_active,
                 c.name as company_name, c.slug as company_slug
          FROM user_companies uc
          JOIN companies c ON uc.company_id = c.id
@@ -306,7 +307,11 @@ export async function login(
          ORDER BY uc.is_primary DESC, uc.joined_at ASC`,
         [user.id]
       );
-      companies = companyRows as Record<string, unknown>[];
+      // Compute permissions from role for each company
+      companies = (companyRows as Array<{ role: string; [key: string]: unknown }>).map((row) => ({
+        ...row,
+        permissions: getRolePermissions(row.role),
+      }));
     }
 
     return {

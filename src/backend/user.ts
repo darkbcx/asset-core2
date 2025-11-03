@@ -87,24 +87,22 @@ export async function createUser(
     is_active: true,
     last_login: null,
     password_hash: passwordHash,
-    system_permissions: userData.system_permissions || null,
     created_at: now,
     updated_at: now,
   };
 
   const query = `
     INSERT INTO users (
-      id, user_type, system_role, system_permissions, email,
+      id, user_type, system_role, email,
       first_name, last_name, is_active, last_login, password_hash,
       created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `;
 
   const params = [
     user.id,
     user.user_type,
     user.system_role,
-    user.system_permissions ? JSON.stringify(user.system_permissions) : null,
     user.email,
     user.first_name,
     user.last_name || null,
@@ -296,14 +294,6 @@ export async function updateUser(
       params.push(validatedData.system_role);
     }
 
-    if (validatedData.system_permissions !== undefined) {
-      updates.push("system_permissions = ?");
-      params.push(
-        validatedData.system_permissions
-          ? JSON.stringify(validatedData.system_permissions)
-          : null
-      );
-    }
 
     // Always update updated_at
     updates.push("updated_at = ?");
@@ -603,7 +593,6 @@ export async function createUserCompany(
     user_id: validatedData.user_id,
     company_id: validatedData.company_id,
     role: validatedData.role,
-    permissions: validatedData.permissions || [],
     is_active: validatedData.is_active ?? true,
     is_primary: validatedData.is_primary ?? false,
     joined_at: now,
@@ -613,9 +602,9 @@ export async function createUserCompany(
 
   const query = `
     INSERT INTO user_companies (
-      id, user_id, company_id, role, permissions,
+      id, user_id, company_id, role,
       is_active, is_primary, joined_at, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
   `;
 
   await db.execute(query, [
@@ -623,7 +612,6 @@ export async function createUserCompany(
     userCompany.user_id,
     userCompany.company_id,
     userCompany.role,
-    JSON.stringify(userCompany.permissions),
     userCompany.is_active,
     userCompany.is_primary,
     userCompany.joined_at,
@@ -710,11 +698,6 @@ export async function updateUserCompany(
   if (validatedData.role !== undefined) {
     updates.push("role = ?");
     params.push(validatedData.role);
-  }
-
-  if (validatedData.permissions !== undefined) {
-    updates.push("permissions = ?");
-    params.push(JSON.stringify(validatedData.permissions));
   }
 
   if (validatedData.is_active !== undefined) {
