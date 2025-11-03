@@ -275,6 +275,21 @@ CREATE TABLE IF NOT EXISTS file_access_logs (
     INDEX idx_accessed_at (accessed_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Refresh Tokens (for JWT refresh token management)
+CREATE TABLE IF NOT EXISTS refresh_tokens (
+    id VARCHAR(36) PRIMARY KEY,
+    user_id VARCHAR(36) NOT NULL,
+    token_hash VARCHAR(64) NOT NULL UNIQUE,
+    expires_at TIMESTAMP NOT NULL,
+    revoked BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_user_id (user_id),
+    INDEX idx_token_hash (token_hash),
+    INDEX idx_expires_at (expires_at),
+    INDEX idx_revoked (revoked)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- Audit Logs
 CREATE TABLE IF NOT EXISTS audit_logs (
     id VARCHAR(36) PRIMARY KEY,

@@ -158,24 +158,34 @@ export async function POST(request: NextRequest) {
 
 ### Refresh Tokens Policy
 
-- **Storage**: Refresh tokens are stored server-side (hashed) and associated with `user_id`, `expires_at`, and status (active/revoked). For local/dev, an in-memory store is acceptable; in production, use database or Redis.
-- **Rotation**: On each successful refresh, the used refresh token is invalidated (rotated) and a new refresh token is issued. The new token replaces the old one in storage.
-- **Reuse Detection**: If a refresh token is presented that was already rotated or revoked, treat as a suspected compromise and revoke all active refresh tokens for that user.
-- **Revocation**: On logout or administrative action, revoke the presented refresh token (or all tokens for a user). Revoked tokens cannot be used again.
-- **Expiration**: Enforce server-side expiration regardless of client token content; expired tokens are considered invalid and removed.
-- **Transport**: Refresh tokens are returned in the response body; clients must store securely on the client side and send only to the refresh endpoint.
+- **Storage**: Refresh tokens are stored server-side in the database (`refresh_tokens` table) as SHA-256 hashes. Each token record includes `user_id`, `token_hash`, `expires_at`, `revoked` status, and `created_at` timestamp. Tokens are never stored in plaintext.
+- **Database Schema**: The `refresh_tokens` table uses `CHAR(36)` for `id` and `user_id`, `VARCHAR(64)` for `token_hash` (unique), `TIMESTAMP` for `expires_at`, and `BOOLEAN` for `revoked`. Indexes on `user_id`, `token_hash`, `expires_at`, and `revoked` ensure efficient lookups.
+- **Rotation**: On each successful refresh, the used refresh token is invalidated (marked as `revoked = TRUE`) and a new refresh token is issued and stored. The rotation is performed atomically within a database transaction to prevent race conditions.
+- **Reuse Detection**: If a refresh token is presented that was already rotated or revoked, the system treats this as a suspected compromise and immediately revokes all active refresh tokens for that user. Reuse detection happens during token validation and rotation checks.
+- **Revocation**: On logout or administrative action, specific tokens or all tokens for a user can be revoked by setting `revoked = TRUE` in the database. Revoked tokens cannot be used again and are filtered out during validation queries.
+- **Expiration**: Enforce server-side expiration by checking `expires_at > CURRENT_TIMESTAMP` in validation queries. Expired tokens are automatically excluded from valid token queries regardless of client token content.
+- **Transport**: Refresh tokens are returned in the response body; clients must store securely on the client side (prefer cookies over localStorage) and send only to the refresh endpoint.
+- **Implementation**: Refresh token management functions (`storeRefreshToken`, `isRefreshTokenValid`, `rotateRefreshToken`, `revokeRefreshToken`, `revokeAllForUser`) are implemented in `@/backend/authentication.ts` using database queries with prepared statements for SQL injection prevention.
 
 **Endpoints**:
-- `POST /api/auth/refresh` – Validates, detects reuse, rotates, and returns new access/refresh tokens
-- `POST /api/auth/logout` – Optionally accepts the current refresh token and revokes it server-side (client still clears local storage)
+- `POST /api/auth/refresh` – Validates token hash against database, detects reuse, rotates token atomically, and returns new access/refresh tokens
+- `POST /api/auth/logout` – Optionally accepts the current refresh token and revokes it server-side via database update (client still clears local storage)
+- `POST /api/auth/set-active-company` – Revokes all existing refresh tokens for the user and stores a new refresh token when switching company context
 
 ```ts
-// Refresh flow (high level)
+// Refresh flow (database-backed)
 // 1) Verify refresh JWT signature and claims
-// 2) Check server store for token hash (exists, not expired, not revoked)
-// 3) Rotate (invalidate old, store new) + detect reuse
+// 2) Hash token (SHA-256) and check database for token_hash (exists, not expired, not revoked)
+// 3) Use transaction to atomically rotate (invalidate old, store new) + detect reuse
 // 4) Return new tokens
 ```
+
+**Database Functions**:
+- `storeRefreshToken(userId, token, expiresAt)` - Stores hashed token in database
+- `isRefreshTokenValid(userId, token)` - Validates token hash exists, not revoked, not expired
+- `rotateRefreshToken(userId, oldToken, newToken, newExpiresAt)` - Atomically rotates token with reuse detection
+- `revokeRefreshToken(token)` - Revokes specific token by hash
+- `revokeAllForUser(userId)` - Revokes all active tokens for a user
 
 ## API Endpoint Structure
 

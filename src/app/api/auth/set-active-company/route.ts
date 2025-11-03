@@ -62,9 +62,9 @@ export async function POST(request: NextRequest) {
     const minted = mintTokensForUser(decoded.sub, validatedData.companyId);
 
     // Revoke existing refresh tokens for this user and store the new one
-    revokeAllForUser(decoded.sub);
+    await revokeAllForUser(decoded.sub);
     const refreshExpiresAt = Date.now() + (minted.expiresIn * 1000); // approximate; if separate refresh exp, adjust accordingly
-    storeRefreshToken(decoded.sub, minted.refreshToken, refreshExpiresAt);
+    await storeRefreshToken(decoded.sub, minted.refreshToken, refreshExpiresAt);
 
     return NextResponse.json({
       success: true,

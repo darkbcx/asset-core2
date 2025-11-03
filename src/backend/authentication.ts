@@ -13,7 +13,7 @@
 
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import { db } from "@/lib/db";
+import { db, executeQuery } from "@/lib/db";
 import { loginSchema, createUserSchema } from "@/lib/validators/user";
 import type {
   User,
@@ -31,92 +31,158 @@ import {
 import type { BackendResponse } from "@/backend/types";
 
 // ==========================================
-// Refresh Token Store (In-Memory Placeholder)
-// In production, back with DB/Redis. Tokens are hashed (sha256).
+// Refresh Token Store (Database-Backed)
+// Tokens are hashed (sha256) before storage.
 // ==========================================
 import crypto from "crypto";
-
-interface StoredToken {
-  userId: string;
-  hash: string;
-  expiresAt: number; // epoch ms
-  revoked: boolean;
-}
-
-const rtTokens = new Map<string, StoredToken>(); // hash -> record
-const rtUserIndex = new Map<string, Set<string>>(); // userId -> set of hashes
+import { v4 as uuidv4 } from "uuid";
 
 function sha256(value: string): string {
   return crypto.createHash("sha256").update(value).digest("hex");
 }
 
-export function storeRefreshToken(userId: string, token: string, expiresAt: number): void {
+interface RefreshTokenRecord {
+  id: string;
+  user_id: string;
+  token_hash: string;
+  expires_at: Date;
+  revoked: boolean;
+  created_at: Date;
+}
+
+/**
+ * Store a refresh token in the database
+ */
+export async function storeRefreshToken(
+  userId: string,
+  token: string,
+  expiresAt: number
+): Promise<void> {
   const hash = sha256(token);
-  const record: StoredToken = { userId, hash, expiresAt, revoked: false };
-  rtTokens.set(hash, record);
-  if (!rtUserIndex.has(userId)) rtUserIndex.set(userId, new Set());
-  rtUserIndex.get(userId)!.add(hash);
+  const id = uuidv4();
+  const expiresAtDate = new Date(expiresAt);
+
+  await db.execute(
+    `INSERT INTO refresh_tokens (id, user_id, token_hash, expires_at, revoked)
+     VALUES (?, ?, ?, ?, FALSE)`,
+    [id, userId, hash, expiresAtDate]
+  );
 }
 
-export function revokeRefreshToken(token: string): void {
+/**
+ * Revoke a specific refresh token
+ */
+export async function revokeRefreshToken(token: string): Promise<void> {
   const hash = sha256(token);
-  const record = rtTokens.get(hash);
-  if (record) {
-    record.revoked = true;
-  }
+
+  await db.execute(
+    `UPDATE refresh_tokens SET revoked = TRUE WHERE token_hash = ?`,
+    [hash]
+  );
 }
 
-export function revokeAllForUser(userId: string): void {
-  const set = rtUserIndex.get(userId);
-  if (set) {
-    for (const hash of set) {
-      const rec = rtTokens.get(hash);
-      if (rec) rec.revoked = true;
-    }
-  }
+/**
+ * Revoke all refresh tokens for a user
+ */
+export async function revokeAllForUser(userId: string): Promise<void> {
+  await db.execute(
+    `UPDATE refresh_tokens SET revoked = TRUE WHERE user_id = ? AND revoked = FALSE`,
+    [userId]
+  );
 }
 
-export function isRefreshTokenValid(userId: string, token: string): boolean {
+/**
+ * Check if a refresh token is valid (exists, not revoked, not expired, matches user)
+ */
+export async function isRefreshTokenValid(
+  userId: string,
+  token: string
+): Promise<boolean> {
   const hash = sha256(token);
-  const record = rtTokens.get(hash);
-  if (!record) return false; // unknown token (reuse or invalid)
-  if (record.userId !== userId) return false;
-  if (record.revoked) return false;
-  if (Date.now() >= record.expiresAt) return false;
-  return true;
+  const now = new Date();
+
+  const [rows] = await db.execute(
+    `SELECT * FROM refresh_tokens
+     WHERE token_hash = ? AND user_id = ? AND revoked = FALSE AND expires_at > ?`,
+    [hash, userId, now]
+  ) as [RefreshTokenRecord[], unknown[]];
+
+  return rows.length > 0;
 }
 
-export function rotateRefreshToken(
+/**
+ * Rotate refresh token: invalidate old, store new
+ * Returns ok: false, reused: true if token was already rotated/revoked (reuse detected)
+ */
+export async function rotateRefreshToken(
   userId: string,
   oldToken: string,
   newToken: string,
   newExpiresAt: number
-): { ok: true } | { ok: false; reused: boolean } {
+): Promise<{ ok: true } | { ok: false; reused: boolean }> {
   const oldHash = sha256(oldToken);
-  const oldRecord = rtTokens.get(oldHash);
-  if (!oldRecord) {
+
+  // Check if old token exists and is valid
+  const [oldRows] = await db.execute(
+    `SELECT * FROM refresh_tokens
+     WHERE token_hash = ? AND user_id = ? AND revoked = FALSE`,
+    [oldHash, userId]
+  ) as [RefreshTokenRecord[], unknown[]];
+
+  if (oldRows.length === 0) {
     // Token not found => likely reuse attempt
-    revokeAllForUser(userId);
+    await revokeAllForUser(userId);
     return { ok: false, reused: true };
   }
-  if (oldRecord.revoked) {
-    // Already rotated/revoked => reuse
-    revokeAllForUser(userId);
+
+  // Use transaction to atomically revoke old and store new
+  try {
+    await db.withTransaction(async (connection) => {
+      // Check current state of token (must be valid before we revoke)
+      const [checkRows] = await connection.execute(
+        `SELECT revoked FROM refresh_tokens WHERE token_hash = ? AND user_id = ?`,
+        [oldHash, userId]
+      ) as [RefreshTokenRecord[], unknown[]];
+
+      if (checkRows.length === 0) {
+        // Token disappeared between check and transaction start => reuse
+        throw new Error("Token reuse detected");
+      }
+
+      if (checkRows[0].revoked === true) {
+        // Already revoked => reuse detected
+        await connection.execute(
+          `UPDATE refresh_tokens SET revoked = TRUE WHERE user_id = ?`,
+          [userId]
+        );
+        throw new Error("Token reuse detected");
+      }
+
+      // Mark old token as revoked
+      await connection.execute(
+        `UPDATE refresh_tokens SET revoked = TRUE WHERE token_hash = ?`,
+        [oldHash]
+      );
+
+      // Store new token
+      const newHash = sha256(newToken);
+      const id = uuidv4();
+      const expiresAtDate = new Date(newExpiresAt);
+
+      await connection.execute(
+        `INSERT INTO refresh_tokens (id, user_id, token_hash, expires_at, revoked)
+         VALUES (?, ?, ?, ?, FALSE)`,
+        [id, userId, newHash, expiresAtDate]
+      );
+    });
+
+    // If we reach here, rotation was successful
+    return { ok: true };
+  } catch {
+    // Transaction failed due to reuse detection
+    await revokeAllForUser(userId);
     return { ok: false, reused: true };
   }
-  // Revoke old and store new
-  oldRecord.revoked = true;
-  const newHash = sha256(newToken);
-  const newRecord: StoredToken = {
-    userId,
-    hash: newHash,
-    expiresAt: newExpiresAt,
-    revoked: false,
-  };
-  rtTokens.set(newHash, newRecord);
-  if (!rtUserIndex.has(userId)) rtUserIndex.set(userId, new Set());
-  rtUserIndex.get(userId)!.add(newHash);
-  return { ok: true };
 }
 
 /**
@@ -226,7 +292,7 @@ export async function login(
     const refreshExpiresAt = Date.now() + refreshExpiresIn * 1000;
 
     // Store refresh token server-side (hashed)
-    storeRefreshToken(user.id, refreshToken, refreshExpiresAt);
+    await storeRefreshToken(user.id, refreshToken, refreshExpiresAt);
 
     // Get user companies if tenant user
     let companies: Record<string, unknown>[] = [];
@@ -284,9 +350,9 @@ export async function refreshToken(
     }
 
     // Check server-side token store (valid, not revoked/expired)
-    if (!isRefreshTokenValid(userId, refreshToken)) {
+    if (!(await isRefreshTokenValid(userId, refreshToken))) {
       // Reuse or invalid; revoke all to be safe
-      revokeAllForUser(userId);
+      await revokeAllForUser(userId);
       return { success: false, error: "Invalid refresh token" };
     }
 
@@ -329,7 +395,7 @@ export async function refreshToken(
     const newRefreshExpiresAt = Date.now() + newRefreshExpiresIn * 1000;
 
     // Rotate refresh token (invalidate old, store new). Detect reuse.
-    const rotated = rotateRefreshToken(userId, refreshToken, newRefreshToken, newRefreshExpiresAt);
+    const rotated = await rotateRefreshToken(userId, refreshToken, newRefreshToken, newRefreshExpiresAt);
     if (!rotated.ok) {
       return { success: false, error: "Refresh token reuse detected" };
     }
@@ -706,4 +772,26 @@ export async function createAuthContext(token: string): Promise<
           : "Failed to create auth context",
     };
   }
+}
+
+export async function deleteRevokedRefreshTokens(options?: { userId?: string; olderThan?: Date }): Promise<number> {
+  const conditions: string[] = [
+    `revoked = TRUE`
+  ];
+  const params: unknown[] = [];
+
+  if (options?.userId) {
+    conditions.push(`user_id = ?`);
+    params.push(options.userId);
+  }
+  if (options?.olderThan) {
+    conditions.push(`created_at < ?`);
+    params.push(options.olderThan);
+  }
+
+  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+  const sql = `DELETE FROM refresh_tokens ${whereClause}`;
+
+  const result = await executeQuery(sql, params);
+  return result.meta.affectedRows;
 }

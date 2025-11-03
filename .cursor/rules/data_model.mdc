@@ -402,6 +402,37 @@ Both use the same JSON format for granular permission configuration: an array of
 - User accountability for uploads
 - Storage path management
 
+### RefreshTokens
+
+**Purpose:** Server-side storage and management of JWT refresh tokens with rotation, reuse detection, and revocation support.
+
+| Field         | Type         | Description                               | Constraints      |
+| ------------- | ------------ | ----------------------------------------- | ---------------- |
+| `id`          | CHAR(36)     | Primary key                               | NOT NULL, UNIQUE |
+| `user_id`     | CHAR(36)     | Foreign key to User                       | NOT NULL, FK     |
+| `token_hash`  | VARCHAR(64)  | SHA-256 hash of refresh token            | NOT NULL, UNIQUE |
+| `expires_at`  | TIMESTAMP    | Token expiration timestamp                | NOT NULL         |
+| `revoked`     | BOOLEAN      | Revocation status                         | DEFAULT FALSE    |
+| `created_at`  | TIMESTAMP    | Token creation timestamp                  | NOT NULL         |
+
+**Key Features:**
+
+- **Secure Storage**: Tokens are hashed (SHA-256) before storage; never stored in plaintext
+- **Token Rotation**: Atomic rotation with database transactions to prevent race conditions
+- **Reuse Detection**: Detects compromised tokens and automatically revokes all user tokens
+- **Efficient Lookups**: Indexes on `user_id`, `token_hash`, `expires_at`, and `revoked` for fast validation queries
+- **Expiration Enforcement**: Server-side expiration checking prevents expired token usage
+- **Revocation Support**: Per-token and bulk user token revocation capabilities
+- **Cascade Deletion**: Tokens automatically deleted when user is deleted
+
+**Business Rules:**
+
+- Each refresh token is uniquely identified by its SHA-256 hash
+- Only one active (non-revoked, non-expired) token per user at a time (enforced through rotation)
+- Tokens expire based on `expires_at` timestamp regardless of JWT claims
+- Revoked tokens cannot be reactivated
+- Token rotation is atomic to prevent concurrent refresh attacks
+
 ### AuditLog
 
 **Purpose:** Comprehensive system audit trail for compliance and security monitoring.
@@ -526,6 +557,7 @@ Additional relationships support advanced functionality:
 
 - **User → UserCompany (1:N)**: Users can have multiple company associations
 - **Company → UserCompany (1:N)**: Companies can have multiple user associations
+- **User → RefreshTokens (1:N)**: Users can have multiple refresh tokens (typically one active at a time, managed through rotation)
 - **MaintenanceRecord → MaintenanceAttachments (1:N)**: Maintenance records can have multiple file attachments
 - **Component → ComponentTransfers (1:N)**: Components can have multiple transfer records
 - **Files → FileVersions (1:N)**: Files can have multiple versions

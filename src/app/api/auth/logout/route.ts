@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
       const body = await request.json();
       const refreshToken = body?.refreshToken as string | undefined;
       if (refreshToken) {
-        revokeRefreshToken(refreshToken);
+        await revokeRefreshToken(refreshToken);
       }
     } catch {
       // no body or invalid JSON, ignore
@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
 
     // If we know the user id, revoke all remaining tokens for user
     if (userId) {
-      revokeAllForUser(userId);
+      await revokeAllForUser(userId);
     }
 
     // Return success - client will clear tokens from cookies/local storage
