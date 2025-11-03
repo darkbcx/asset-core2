@@ -134,7 +134,7 @@ export default function DashboardLayout({
         <SidebarRail />
       </Sidebar>
       <main className="flex flex-1 flex-col">
-        <header className="flex h-16 shrink-0 items-center gap-2 border-b border-sidebar-border bg-background px-4">
+        <header className="sticky top-0 z-50 flex h-16 shrink-0 items-center gap-2 border-b border-sidebar-border bg-background px-4">
           <SidebarTrigger />
           <div className="flex-1" />
           <div className="flex items-center gap-4">
