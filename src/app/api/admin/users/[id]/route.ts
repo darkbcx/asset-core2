@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getUserById, updateUser, deleteUser } from "@/backend/user";
 import { updateUserSchema, type User } from "@/lib/validators/user";
-import { createSafeUserResponse, requireSystemAdminWithPermissions } from "@/lib/utils";
+import { createSafeUserResponse } from "@/lib/utils";
+import { requireSystemAdminWithPermissions } from "@/lib/authz/api";
 
 // requireSystemAdmin is imported from utils
 

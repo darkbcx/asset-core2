@@ -220,6 +220,24 @@ export function hasAnyPermission(userPermissions: string[], requiredPermissions:
 }
 
 /**
+ * Generic permission evaluation for a given user context
+ * Combines role-derived permissions with provided explicit permissions (if any)
+ */
+export function checkPermissionsForContext(
+  context: { userType: string; systemRole?: string | null; permissions?: string[] },
+  required: string[] | string,
+  mode: 'any' | 'all' = 'any'
+): boolean {
+  const rolePerms = context.userType === 'system_admin' ? getRolePermissions(context.systemRole || '') : [];
+  const explicitPerms = context.permissions || [];
+  const userPermissions = Array.from(new Set([...rolePerms, ...explicitPerms]));
+  const requiredList = Array.isArray(required) ? required : [required];
+  return mode === 'all'
+    ? hasAllPermissions(userPermissions, requiredList)
+    : hasAnyPermission(userPermissions, requiredList);
+}
+
+/**
  * Check if user is a system administrator
  */
 export function isSystemAdmin(userType: string): boolean {

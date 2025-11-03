@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { listUsersPaginated } from "@/backend/user";
 import { register } from "@/backend/authentication";
 import { createUserSchema, type User } from "@/lib/validators/user";
-import { createSafeUserResponse, requireSystemAdminWithPermissions } from "@/lib/utils";
+import { createSafeUserResponse } from "@/lib/utils";
+import { requireSystemAdminWithPermissions } from "@/lib/authz/api";
 
 // GET /api/admin/users → list users with pagination (system-wide)
 export async function GET(request: NextRequest) {

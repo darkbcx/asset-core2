@@ -268,6 +268,17 @@ packages/
 - **Delegate to Backend**: All database operations must be delegated to backend repository functions
 - **Layer Separation**: Thin controllers that only handle HTTP concerns (request/response mapping)
 
+### Authorization & Permissions
+
+- Shared permission logic lives in:
+  - `src/lib/permissions.ts` (generic evaluator: `checkPermissionsForContext`)
+  - `src/lib/authz/api.ts` (API guards reading Authorization header)
+  - `src/lib/authz/web.ts` (web/frontend permission checks)
+
+- Use cases:
+  - API controllers import from `@/lib/authz/api` to guard routes with role and permission checks.
+  - Web components/hooks import from `@/lib/authz/web` to conditionally render actions/links.
+
 ### Frontend Layer (`src/app/`)
 
 - **Component Logic**: Focus on UI logic and user interactions

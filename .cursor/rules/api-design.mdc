@@ -295,3 +295,38 @@ const [rows] = await connection.query(query, [id]); // Use execute() instead
 - **Error Rate Tracking**: Monitor and alert on error rates
 - **Usage Analytics**: Track API usage patterns and trends
 - **Health Checks**: Regular endpoint health monitoring
+
+### Permission Checking (RBAC)
+
+AssetCore standardizes permission checks across API routes and the web frontend using shared helpers.
+
+- Generic evaluator (shared): `src/lib/permissions.ts`
+  - `checkPermissionsForContext(context, required, mode)` merges role-derived and explicit permissions and evaluates them.
+
+- API routes (server): `src/lib/authz/api.ts`
+  - `requireSystemAdmin(request)` validates JWT from `Authorization: Bearer <token>`, builds auth context, and enforces `system_admin`.
+  - `requireSystemAdminWithPermissions(request, required, mode)` adds permission checks via the generic evaluator.
+  - Usage in API routes: import from `@/lib/authz/api` and early-return with the provided `response`.
+
+- Web/frontend (client/server components): `src/lib/authz/web.ts`
+  - `hasUserPermissions(user, required, mode)` checks permissions for the current user context (e.g., from session or props).
+
+Rules:
+- API routes MUST use `@/lib/authz/api` guards (never read cookies; read the Authorization header only).
+- Frontend MUST use `@/lib/authz/web` (no header parsing on the client).
+- Roles map to permissions via `getRolePermissions(systemRole)`; super admin (`*:*`) passes all checks.
+
+Examples:
+```ts
+// API: require read permissions for users
+import { requireSystemAdminWithPermissions } from '@/lib/authz/api';
+export async function GET(request: NextRequest) {
+  const auth = await requireSystemAdminWithPermissions(request, ['users:read', '*:read'], 'any');
+  if (!auth.ok) return auth.response;
+  // ...
+}
+
+// Web: check before showing a button
+import { hasUserPermissions } from '@/lib/authz/web';
+const canCreate = hasUserPermissions(user, 'users:create');
+```
